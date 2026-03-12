@@ -10,23 +10,23 @@
 #define GROW_CAPACITY(capacity) \
 	((capacity) < 8 ? 8 : (capacity) * 2)
 
-#define INIT_ARRAY() \
-	array->tokens = NULL; \
-	array->count = 0; \
-	array->capacity = 0
+#define INIT_ARRAY(arrayName, arrayPtrName) \
+	arrayName->arrayPtrName = NULL; \
+	arrayName->count = 0; \
+	arrayName->capacity = 0
 
 #define GROW_ARRAY(type, pointer, newCount) \
 	(type*)reallocate(pointer, sizeof(type) * (newCount))
 
-#define WRITE_ARRAY(type, arrayPtrName, itemName) \
-	if (array->capacity < array->count + 1) \
+#define WRITE_ARRAY(type, arrayName, arrayPtrName, itemName) \
+	if (arrayName->capacity < arrayName->count + 1) \
 	{ \
-		int oldCapacity = array->capacity; \
-		array->capacity = GROW_CAPACITY(oldCapacity); \
-		array->arrayPtrName = GROW_ARRAY(type, array->arrayPtrName, array->capacity); \
+		int oldCapacity = arrayName->capacity; \
+		arrayName->capacity = GROW_CAPACITY(oldCapacity); \
+		arrayName->arrayPtrName = GROW_ARRAY(type, arrayName->arrayPtrName, arrayName->capacity); \
 	} \
-	array->arrayPtrName[array->count] = itemName; \
-	array->count++
+	arrayName->arrayPtrName[arrayName->count] = itemName; \
+	arrayName->count++
 
 void* reallocate(void* ptr, size_t newSize);
 

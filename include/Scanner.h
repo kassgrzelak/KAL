@@ -46,7 +46,8 @@ typedef struct
 } Scanner;
 
 void initScanner(Scanner* scanner, const char* source);
-void tokenize(Scanner* scanner);
 void freeScanner(const Scanner* scanner);
+
+void tokenize(Scanner* scanner);
 
 #endif //KAL_SCANNER_H

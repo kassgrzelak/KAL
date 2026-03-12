@@ -11,12 +11,12 @@
 
 static void initTokenArray(TokenArray* array)
 {
-	INIT_ARRAY();
+	INIT_ARRAY(array, tokens);
 }
 
 static void writeTokenArray(TokenArray* array, const Token token)
 {
-	WRITE_ARRAY(Token, tokens, token);
+	WRITE_ARRAY(Token, array, tokens, token);
 }
 
 void initScanner(Scanner* scanner, const char* source)
@@ -27,14 +27,19 @@ void initScanner(Scanner* scanner, const char* source)
 	initTokenArray(&scanner->tokenArray);
 }
 
+void freeScanner(const Scanner* scanner)
+{
+	free(scanner->tokenArray.tokens);
+}
+
 #ifdef DEBUG_PRINT_TOKENS
 static void printToken(const TokenType type, const char* start, const int length, const int line)
 {
-	printf("'%.*s'", length, start);
+	printf("%04d |", line);
 
 #define TYPE_CASE(type) \
 	case type: \
-		printf(" %s ", #type); \
+		printf(" %-20s |", #type); \
 		break
 
 	switch (type)
@@ -57,7 +62,7 @@ static void printToken(const TokenType type, const char* start, const int length
 		break;
 	}
 
-	printf("%04d\n", line);
+	printf(" '%.*s'\n", length, start);
 #undef TYPE_CASE
 }
 #endif
@@ -81,15 +86,15 @@ static Token makeToken(const Scanner* scanner, const TokenType type)
 
 static Token errorToken(Scanner* scanner, const char* message)
 {
-#ifdef DEBUG_PRINT_TOKENS
-	printf("'%s' ERROR %04d\n", message, scanner->line);
-#endif
-
 	Token token;
 	token.type = TOKEN_ERROR;
 	token.start = message;
 	token.length = (int)strlen(message);
 	token.line = scanner->line;
+
+#ifdef DEBUG_PRINT_TOKENS
+	printToken(TOKEN_ERROR, message, token.length, token.line);
+#endif
 
 	// Advance past error.
 	++scanner->current;
@@ -274,6 +279,10 @@ static Token scanToken(Scanner* scanner)
 
 void tokenize(Scanner* scanner)
 {
+#ifdef DEBUG_PRINT_TOKENS
+	printf("Line | Token type           | Lexeme\n");
+	printf("------------------------------------\n");
+#endif
 
 	for (;;)
 	{
@@ -282,9 +291,4 @@ void tokenize(Scanner* scanner)
 		if (token.type == TOKEN_EOF)
 			break;
 	}
-}
-
-void freeScanner(const Scanner* scanner)
-{
-	free(scanner->tokenArray.tokens);
 }

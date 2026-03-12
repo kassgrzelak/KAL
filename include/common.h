@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// Print tokens as they are created when calling tokenize().
 #define DEBUG_PRINT_TOKENS
 
 #endif //KAL_COMMON_H

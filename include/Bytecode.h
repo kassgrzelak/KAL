@@ -1,5 +1,5 @@
 //
-// Created by kassie on 11/03/2026.
+// Created by kassie on 12/03/2026.
 //
 
 #ifndef KAL_BYTECODE_H
@@ -9,12 +9,13 @@
 
 typedef struct
 {
+	uint8_t* code;
 	size_t capacity;
 	size_t count;
-	uint8_t* code;
 } Bytecode;
 
-void initBytecode(Bytecode* code);
-void freeBytecode(Bytecode* code);
+void initBytecode(Bytecode* bytecode);
+void writeBytecode(Bytecode* bytecode, uint8_t byte);
+void freeBytecode(Bytecode* bytecode);
 
 #endif //KAL_BYTECODE_H

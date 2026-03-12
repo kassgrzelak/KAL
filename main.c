@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "Scanner.h"
+#include "Compiler.h"
 
 static void repl()
 {
@@ -24,18 +24,15 @@ static void repl()
 			break;
 		}
 
-		Scanner scanner;
-		initScanner(&scanner, line);
-		tokenize(&scanner);
-		for (int i = 0; i < scanner.tokenArray.count; ++i)
-			printf("%d ", scanner.tokenArray.tokens[i].type);
-		freeScanner(&scanner);
+		Compiler compiler;
+		initCompiler(&compiler, NULL, NULL);
+		compile(&compiler, line);
 	}
 }
 
 static void runFile(const char* path)
 {
-
+	// TODO: Run file.
 }
 
 int main(const int argc, const char* argv[])
