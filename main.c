@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "Compiler.h"
+#include "VM.h"
 
 static void repl()
 {
@@ -12,6 +13,7 @@ static void repl()
 	printf("\nPress return without typing anything to exit.\n\n");
 
 	char line[1024];
+	VM vm;
 
 	for (;;)
 	{
@@ -30,9 +32,44 @@ static void repl()
 	}
 }
 
+static const char* readFile(const char* path)
+{
+	FILE* file = fopen(path, "rb");
+	if (file == NULL)
+	{
+		fprintf(stderr, "Could not open file '%s'.\n", path);
+		exit(74);
+	}
+
+	fseek(file, 0, SEEK_END);
+	const size_t fileSize = ftell(file);
+	rewind(file);
+
+	char* buffer = malloc(fileSize + 1);
+	if (buffer == NULL)
+	{
+		fprintf(stderr, "Not enough memory to read '%s'.\n", path);
+		exit(74);
+	}
+
+	const size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+	if (bytesRead < fileSize)
+	{
+		fprintf(stderr, "Couldn't read file '%s'.\n", path);
+		exit(74);
+	}
+	buffer[bytesRead] = '\0';
+
+	fclose(file);
+	return buffer;
+}
+
 static void runFile(const char* path)
 {
-	// TODO: Run file.
+	const char* source = readFile(path);
+	Compiler compiler;
+	initCompiler(&compiler, NULL, NULL);
+	compile(&compiler, source);
 }
 
 int main(const int argc, const char* argv[])

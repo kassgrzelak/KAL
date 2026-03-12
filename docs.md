@@ -47,6 +47,19 @@ line or appear at the end of a line.
 inc %4 ; Increment the value in register 4.
 ```
 
+Inline comments may also be formed by surrounding commented text in semicolons (`;`). These comments may not span lines.
+
+Allowed:
+```
+ld ;pos; %0 ;newPos; *1
+```
+Not allowed:
+```
+inc %0 ; Increment
+register zero. ; ld $0 %0
+```
+`register zero. ` will be read as code and `ld $0 %0` will be read as a comment.
+
 ### Registers
 
 There are eight 8-bit registers in the virtual CPU used by KAL. The values in a register are referred to by the register

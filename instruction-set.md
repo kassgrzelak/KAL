@@ -10,21 +10,24 @@ Where one argument type appears more than once in an instruction, they may be nu
 ## Basic
 ### nop
 Do nothing.
-- nop - Do nothing.
+- `nop` - Do nothing.
 
 ### ld
 Load a value into a memory location.
-- ld M C - Load constant C into memory location M.
-- ld M1 M0 - Load the value at memory location M0 into memory location M1.
+- `ld M C` - Load constant C into memory location M.
+- `ld M1 M0` - Load the value at memory location M0 into memory location M1.
 
 ### out
 Output a value to stdout.
-- out C - Output a constant.
-- out M - Output the value in a memory location.
+- `out C` - Output a constant.
+- `out M` - Output the value in a memory location.
+
+## Arithmetic
+### inc
+Increment the value in a memory location.
+- `inc M` - Increment the value in memory location M. Identical to `add M 1`.
 
 ## Jumps
 ### jmp
 Unconditional jump.
-- jmp C - jump a constant number of **instructions** ahead.
-- jmp M - jump `n` instructions ahead, where n is the value held in memory location M.
-- jmp L - Jump to label L.
+- `jmp L` - Jump to label L.

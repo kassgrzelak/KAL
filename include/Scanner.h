@@ -9,8 +9,8 @@
 
 typedef enum
 {
-	// Instruction mnemonic.
-	TOKEN_MNEMONIC,
+	// Instruction mnemonics.
+	TOKEN_NOP, TOKEN_LD, TOKEN_OUT, TOKEN_INC, TOKEN_JMP, TOKEN_HLT,
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,
