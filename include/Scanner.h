@@ -5,11 +5,48 @@
 #ifndef KAL_SCANNER_H
 #define KAL_SCANNER_H
 
+#include "common.h"
+
+typedef enum
+{
+	// Instruction mnemonic.
+	TOKEN_MNEMONIC,
+
+	// Label declaration.
+	TOKEN_LABEL_DECL,
+
+	// Operand types.
+	TOKEN_CONSTANT, TOKEN_REGISTER, TOKEN_MEMORY, TOKEN_POINTER, TOKEN_LABEL_OPERAND,
+
+	// Special.
+	TOKEN_EOF, TOKEN_ERROR
+} TokenType;
+
+typedef struct
+{
+	const char* start;
+	TokenType type;
+	int length;
+	int line;
+} Token;
+
+typedef struct
+{
+	Token* tokens;
+	size_t count;
+	size_t capacity;
+} TokenArray;
+
 typedef struct
 {
 	const char* start;
 	const char* current;
 	int line;
+	TokenArray tokenArray;
 } Scanner;
+
+void initScanner(Scanner* scanner, const char* source);
+void tokenize(Scanner* scanner);
+void freeScanner(const Scanner* scanner);
 
 #endif //KAL_SCANNER_H

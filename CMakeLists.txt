@@ -9,6 +9,7 @@ add_executable(kal main.c
         include/Bytecode.h
         include/memory.h
         src/memory.c
-        include/Scanner.h)
+        include/Scanner.h
+        src/Scanner.c)
 
 target_include_directories(kal PRIVATE include)
