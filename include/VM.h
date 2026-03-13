@@ -18,4 +18,7 @@ typedef struct
 	size_t jumpTable[256];
 } VM;
 
+void initVM(VM* vm);
+void freeVM(const VM* vm);
+
 #endif //KAL_VM_H

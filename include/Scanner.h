@@ -9,18 +9,21 @@
 
 typedef enum
 {
-	// Instruction mnemonics.
+	// Instruction mnemonics. All instruction tokens MUST be placed immediately before TOKEN_LABEL_DECL.
 	TOKEN_NOP, TOKEN_LD, TOKEN_OUT, TOKEN_INC, TOKEN_JMP, TOKEN_HLT,
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,
 
-	// Operand types.
+	// Operand types. All operand types MUST be in a contiguous range.
 	TOKEN_CONSTANT, TOKEN_REGISTER, TOKEN_MEMORY, TOKEN_POINTER, TOKEN_LABEL_OPERAND,
 
 	// Special.
 	TOKEN_EOF, TOKEN_ERROR
 } TokenType;
+
+bool isStatementStarter(TokenType type);
+bool isOperand(TokenType type);
 
 typedef struct
 {

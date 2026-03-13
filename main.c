@@ -26,13 +26,16 @@ static void repl()
 			break;
 		}
 
-		Compiler compiler;
-		initCompiler(&compiler, NULL, NULL);
-		compile(&compiler, line);
+		Bytecode code;
+		initBytecode(&code);
+		compile(&code, NULL, line);
+
+		for (int i = 0; i < code.count; ++i)
+			printf("%d ", code.code[i]);
 	}
 }
 
-static const char* readFile(const char* path)
+static char* readFile(const char* path)
 {
 	FILE* file = fopen(path, "rb");
 	if (file == NULL)
@@ -66,10 +69,8 @@ static const char* readFile(const char* path)
 
 static void runFile(const char* path)
 {
-	const char* source = readFile(path);
-	Compiler compiler;
-	initCompiler(&compiler, NULL, NULL);
-	compile(&compiler, source);
+	char* source = readFile(path);
+	free(source);
 }
 
 int main(const int argc, const char* argv[])

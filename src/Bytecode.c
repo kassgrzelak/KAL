@@ -10,10 +10,12 @@ void initBytecode(Bytecode* bytecode)
 	INIT_ARRAY(bytecode, code);
 }
 
-void writeBytecode(Bytecode* bytecode, uint8_t byte)
+void writeBytecode(Bytecode* bytecode, const uint8_t byte)
 {
+	WRITE_ARRAY(uint8_t, bytecode, code, byte);
 }
 
-void freeBytecode(Bytecode* bytecode)
+void freeBytecode(const Bytecode* bytecode)
 {
+	free(bytecode->code);
 }

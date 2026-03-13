@@ -9,10 +9,13 @@
 #include "Scanner.h"
 
 // IMPORTANT: Checklist for adding a new instruction:
-// - Add opcodes for all addressing modes to appropriate opcode enum in Compiler.h.
 // - Add token to TokenType enum in Scanner.h.
 // - Add scanning support in mnemonic() in Scanner.c.
 // - Add debug printing support in printToken() in Scanner.c.
+// - Add opcodes for all addressing modes to appropriate opcode enum in Compiler.h.
+// - Add parser to Compiler.c to handle all addressing modes.
+// - Add parser to mnemonicParserTable in Compiler.c.
+// - Add execution support to VM.c.
 
 // Shorthand for instruction addressing modes:
 // C - Constant.
@@ -45,19 +48,6 @@ typedef enum : uint8_t
 	OP1_BANK_2,
 } OpcodeBank1;
 
-typedef struct
-{
-	Bytecode* bytecode;
-	size_t* jumpTable;
-
-	const char* labelNames[256];
-	int labelLengths[256];
-
-	Token* current;
-} Compiler;
-
-void initCompiler(Compiler* compiler, Bytecode* bytecode, size_t* jumpTable);
-
-bool compile(Compiler* compiler, const char* source);
+bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source);
 
 #endif //KAL_COMPILER_H

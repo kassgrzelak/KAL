@@ -20,6 +20,21 @@ static void writeTokenArray(TokenArray* array, const Token token)
 	WRITE_ARRAY(Token, array, tokens, token);
 }
 
+static void freeTokenArray(const TokenArray* array)
+{
+	free(array->tokens);
+}
+
+bool isStatementStarter(const TokenType type)
+{
+	return type <= TOKEN_LABEL_DECL;
+}
+
+bool isOperand(const TokenType type)
+{
+	return type >= TOKEN_CONSTANT && type <= TOKEN_LABEL_OPERAND;
+}
+
 void initScanner(Scanner* scanner, const char* source)
 {
 	scanner->start = source;
@@ -30,7 +45,7 @@ void initScanner(Scanner* scanner, const char* source)
 
 void freeScanner(const Scanner* scanner)
 {
-	free(scanner->tokenArray.tokens);
+	freeTokenArray(&scanner->tokenArray);
 }
 
 #ifdef DEBUG_PRINT_TOKENS

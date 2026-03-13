@@ -1,11 +1,10 @@
 # KAL Docs
 
 ### Syntax
-A KAL Program consists of a series statements, which are either labels or instructions. 
+A KAL Program consists of a series of statements, which are either labels or instructions. 
 The convention is to have one statement per line, but KAL allows multiple.
 
 ### Instruction Statements
-
 An instruction statement starts with an instruction mnemonic and is followed by the arguments for that instruction, 
 separated by whitespace.
 Here is an example:
@@ -22,10 +21,9 @@ mul %0 4 ; Multiply the value in register 0 by 4.
 out %0 ; Output the value of register 0.
 ```
 
-KAL is case insensitive.
+KAL is case-insensitive.
 
 ### Labels
-
 A label is a location in the code with an identifier so that it can be referred to later in order to jump to it.
 A label is declared by writing its identifier followed by the label declaration operator (`:`). To use a label as an
 operand to an instruction,  such as a jump instruction, you must prepend the label identifier with the label operand
@@ -39,7 +37,6 @@ jmp .start ; Output 0 infinitely.
 Label identifiers must be exclusively alphanumeric, and you may not have more than 256 of them in a program.
 
 ### Comments
-
 Comments are denoted with semicolons (`;`) and go until the end of the line. A comment may make up the entirety of a
 line or appear at the end of a line.
 ```
@@ -60,8 +57,18 @@ register zero. ; ld $0 %0
 ```
 `register zero. ` will be read as code and `ld $0 %0` will be read as a comment.
 
-### Registers
+### Constants
+Constants are written as just plain numbers, with no special operator denoting them. they are parsed as decimal numbers
+by default, but binary literals can be written by adding the prefix `0b`, octal by `0`, and hexadecimal by `0x` (All 
+case-insensitive). Letters A through F in hexadecimal number literals are also case-insensitive.
+```
+out 0b1001 ; Binary.
+out 0123   ; Octal.
+out 123    ; Decimal.
+out 0xcf   ; Hexadecimal.
+```
 
+### Registers
 There are eight 8-bit registers in the virtual CPU used by KAL. The values in a register are referred to by the register
 operator (`%`) followed by the index of that register (0-7 inclusive). For example:
 ```
@@ -73,9 +80,11 @@ If you wish, you can also refer to the registers alphabetically. That is, `%a` r
 ```
 out %a ; Also output the value in register 0.
 ```
+Note that `%a` is different from `%0xa`. The first refers to register zero and the second to (the non-existent)
+register ten.
+
 
 ### RAM
-
 The 8-bit registers allow for the addressing of 256 bytes of RAM. Just like registers, you can access RAM using an index
 from 0 to 255, inclusive, using the RAM operator (`$`).
 ```

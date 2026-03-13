@@ -16,6 +16,6 @@ typedef struct
 
 void initBytecode(Bytecode* bytecode);
 void writeBytecode(Bytecode* bytecode, uint8_t byte);
-void freeBytecode(Bytecode* bytecode);
+void freeBytecode(const Bytecode* bytecode);
 
 #endif //KAL_BYTECODE_H
