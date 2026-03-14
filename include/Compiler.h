@@ -13,6 +13,7 @@
 // - Add scanning support in mnemonic() in Scanner.c.
 // - Add debug printing support in printToken() in Scanner.c.
 // - Add opcodes for all addressing modes to appropriate opcode enum in Compiler.h.
+// - Add offset to appropriate getOffset() function in Compiler.c.
 // - Add parser to Compiler.c to handle all addressing modes.
 // - Add parser to mnemonicParserTable in Compiler.c.
 // - Add execution support to VM.c.
@@ -30,9 +31,7 @@ typedef enum : uint8_t
 
 	OP0_NOP,
 
-	OP0_LD_RC, OP0_LD_RR, OP0_LD_RM, OP0_LD_RP,
-	OP0_LD_MC, OP0_LD_MR, OP0_LD_MM, OP0_LD_MP,
-	OP0_LD_PC, OP0_LD_PR, OP0_LD_PM, OP0_LD_PP,
+	OP0_HLT,
 
 	OP0_OUT_C, OP0_OUT_R, OP0_OUT_M, OP0_OUT_P,
 
@@ -40,13 +39,18 @@ typedef enum : uint8_t
 
 	OP0_JMP_C, OP0_JMP_R, OP0_JMP_M, OP0_JMP_P, OP0_JMP_L,
 
-	OP0_HLT,
+	OP0_LD_RC, OP0_LD_RR, OP0_LD_RM, OP0_LD_RP,
+	OP0_LD_MC, OP0_LD_MR, OP0_LD_MM, OP0_LD_MP,
+	OP0_LD_PC, OP0_LD_PR, OP0_LD_PM, OP0_LD_PP,
 } OpcodeBank0;
 
 typedef enum : uint8_t
 {
 	OP1_BANK_2,
 } OpcodeBank1;
+
+int getOffsetBank0(uint8_t opcode);
+int getOffsetBank1(uint8_t opcode);
 
 bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source);
 

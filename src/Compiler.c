@@ -8,6 +8,23 @@
 
 #define MAX_OPERAND_NUM 8
 
+int getOffsetBank0(const uint8_t opcode)
+{
+	if (opcode >= OP0_NOP && opcode <= OP0_HLT)
+		return 1;
+	if (opcode >= OP0_OUT_C && opcode <= OP0_INC_P)
+		return 2;
+	if (opcode >= OP0_LD_RC && opcode <= OP0_LD_PP)
+		return 3;
+
+	return -1;
+}
+
+int getOffsetBank1(const uint8_t opcode)
+{
+	return -1;
+}
+
 typedef struct
 {
 	Bytecode* bytecode;
@@ -158,6 +175,78 @@ static void parserNOP(Compiler* compiler)
 	emitByte(compiler, OP0_NOP);
 }
 
+static void parserHLT(Compiler* compiler)
+{
+	if (compiler->operandNum != 0)
+		return noAddressingModeError(compiler);
+
+	emitByte(compiler, OP0_HLT);
+}
+
+static void parserOUT(Compiler* compiler)
+{
+	if (compiler->operandNum != 1)
+		return noAddressingModeError(compiler);
+
+	const TokenType operandType = compiler->operands[0]->type;
+
+	if (operandType == TOKEN_CONSTANT)
+	{
+		emitByte(compiler, OP0_OUT_C);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+	if (operandType == TOKEN_REGISTER)
+	{
+		emitByte(compiler, OP0_OUT_R);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+	if (operandType == TOKEN_MEMORY)
+	{
+		emitByte(compiler, OP0_OUT_M);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+	if (operandType == TOKEN_POINTER)
+	{
+		emitByte(compiler, OP0_OUT_P);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+
+	noAddressingModeError(compiler);
+}
+
+static void parserINC(Compiler* compiler)
+{
+	if (compiler->operandNum != 1)
+		return noAddressingModeError(compiler);
+
+	const TokenType operandType = compiler->operands[0]->type;
+
+	if (operandType == TOKEN_REGISTER)
+	{
+		emitByte(compiler, OP0_INC_R);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+	if (operandType == TOKEN_MEMORY)
+	{
+		emitByte(compiler, OP0_INC_M);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+	if (operandType == TOKEN_POINTER)
+	{
+		emitByte(compiler, OP0_INC_P);
+		emitByte(compiler, parseOperand(compiler, 0));
+		return;
+	}
+
+	noAddressingModeError(compiler);
+}
+
 static void parserJMP(Compiler* compiler)
 {
 	if (compiler->operandNum != 1)
@@ -199,9 +288,118 @@ static void parserJMP(Compiler* compiler)
 	noAddressingModeError(compiler);
 }
 
+static void parserLD(Compiler* compiler)
+{
+	if (compiler->operandNum != 2)
+		return noAddressingModeError(compiler);
+
+	const TokenType operandType0 = compiler->operands[0]->type;
+	const TokenType operandType1 = compiler->operands[1]->type;
+
+	if (operandType0 == TOKEN_REGISTER)
+	{
+		if (operandType1 == TOKEN_CONSTANT)
+		{
+			emitByte(compiler, OP0_LD_RC);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_REGISTER)
+		{
+			emitByte(compiler, OP0_LD_RR);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_MEMORY)
+		{
+			emitByte(compiler, OP0_LD_RM);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_POINTER)
+		{
+			emitByte(compiler, OP0_LD_RP);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+	}
+	if (operandType0 == TOKEN_MEMORY)
+	{
+		if (operandType1 == TOKEN_CONSTANT)
+		{
+			emitByte(compiler, OP0_LD_MC);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_REGISTER)
+		{
+			emitByte(compiler, OP0_LD_MR);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_MEMORY)
+		{
+			emitByte(compiler, OP0_LD_MM);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_POINTER)
+		{
+			emitByte(compiler, OP0_LD_MP);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+	}
+	if (operandType0 == TOKEN_POINTER)
+	{
+		if (operandType1 == TOKEN_CONSTANT)
+		{
+			emitByte(compiler, OP0_LD_PC);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_REGISTER)
+		{
+			emitByte(compiler, OP0_LD_PR);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_MEMORY)
+		{
+			emitByte(compiler, OP0_LD_PM);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+		if (operandType1 == TOKEN_POINTER)
+		{
+			emitByte(compiler, OP0_LD_PP);
+			emitByte(compiler, parseOperand(compiler, 0));
+			emitByte(compiler, parseOperand(compiler, 1));
+			return;
+		}
+	}
+
+	noAddressingModeError(compiler);
+}
+
 const MnemonicParser mnemonicParserTable[] = {
 	[TOKEN_NOP] = &parserNOP,
+	[TOKEN_HLT] = &parserHLT,
+	[TOKEN_OUT] = &parserOUT,
+	[TOKEN_INC] = &parserINC,
 	[TOKEN_JMP] = &parserJMP,
+	[TOKEN_LD]  = &parserLD,
 };
 
 void parseInstruction(Compiler* compiler)

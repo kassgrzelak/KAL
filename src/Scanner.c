@@ -61,11 +61,11 @@ static void printToken(const TokenType type, const char* start, const int length
 	switch (type)
 	{
 	TYPE_CASE(TOKEN_NOP);
-	TYPE_CASE(TOKEN_LD);
+	TYPE_CASE(TOKEN_HLT);
 	TYPE_CASE(TOKEN_OUT);
 	TYPE_CASE(TOKEN_INC);
 	TYPE_CASE(TOKEN_JMP);
-	TYPE_CASE(TOKEN_HLT);
+	TYPE_CASE(TOKEN_LD);
 
 	TYPE_CASE(TOKEN_LABEL_DECL);
 
@@ -123,6 +123,21 @@ static Token errorToken(Scanner* scanner, const char* message)
 	return token;
 }
 
+static Token errorTokenNoAdvance(const Scanner* scanner, const char* message)
+{
+	Token token;
+	token.type = TOKEN_ERROR;
+	token.start = message;
+	token.length = (int)strlen(message);
+	token.line = scanner->line;
+
+#ifdef DEBUG_PRINT_TOKENS
+	printToken(TOKEN_ERROR, message, token.length, token.line);
+#endif
+
+	return token;
+}
+
 static bool isAlpha(const char c)
 {
 	return (c >= 'a' && c <= 'z') ||
@@ -166,8 +181,10 @@ static char peek(const Scanner* scanner)
 	return *scanner->current;
 }
 
-static void skipWhitespace(Scanner* scanner)
+static bool skipWhitespace(Scanner* scanner)
 {
+	bool whitespaceSeen = false;
+
 	for (;;)
 	{
 		switch (peek(scanner))
@@ -175,10 +192,12 @@ static void skipWhitespace(Scanner* scanner)
 		case ' ':
 		case '\r':
 		case'\t':
+			whitespaceSeen = true;
 			advance(scanner);
 			break;
 		case ';':
 			{
+				whitespaceSeen = true;
 				advance(scanner);
 
 				while (peek(scanner) != '\n' && peek(scanner) != ';' && !atEnd(scanner))
@@ -192,11 +211,12 @@ static void skipWhitespace(Scanner* scanner)
 			}
 		case '\n':
 			++scanner->line;
+			whitespaceSeen = true;
 			advance(scanner);
 			break;
 
 		default:
-			return;
+			return whitespaceSeen;
 		}
 	}
 }
@@ -253,6 +273,34 @@ static Token identifier(Scanner* scanner, const bool labelOperand)
 
 static Token number(Scanner* scanner, const TokenType type)
 {
+	if (type == TOKEN_REGISTER && peek(scanner) >= 'a' && peek(scanner) <= 'h')
+	{
+		const int registerNum = peek(scanner) - 'a';
+		advance(scanner);
+		const char* digit;
+
+		switch (registerNum)
+		{
+		case 0: digit = "0"; break;
+		case 1: digit = "1"; break;
+		case 2: digit = "2"; break;
+		case 3: digit = "3"; break;
+		case 4: digit = "4"; break;
+		case 5: digit = "5"; break;
+		case 6: digit = "6"; break;
+		case 7: digit = "7"; break;
+		case 8: digit = "8"; break;
+		case 9: digit = "9"; break;
+
+		default: digit = "!"; break; // Unreachable.
+		}
+
+#ifdef DEBUG_PRINT_TOKENS
+		printToken(type, digit, 1, scanner->line);
+#endif
+		return (Token){digit, type, 1, scanner->line};
+	}
+
 	if (!isDigit(peek(scanner), DECIMAL))
 		return errorToken(scanner, "Expected number or base specifier after operator.");
 
@@ -262,11 +310,8 @@ static Token number(Scanner* scanner, const TokenType type)
 	{
 		advance(scanner);
 
-		if (isDigit(peek(scanner), OCTAL))
-		{
-			advance(scanner);
+		if (isDigit(peek(scanner), DECIMAL))
 			base = OCTAL;
-		}
 		else
 		{
 			switch (tolower(peek(scanner)))
@@ -294,9 +339,6 @@ static Token number(Scanner* scanner, const TokenType type)
 
 static Token scanToken(Scanner* scanner)
 {
-	skipWhitespace(scanner);
-	scanner->start = scanner->current;
-
 	if (atEnd(scanner))
 		return makeToken(scanner, TOKEN_EOF);
 
@@ -345,11 +387,21 @@ void tokenize(Scanner* scanner)
 	printf("------------------------------------\n");
 #endif
 
+	skipWhitespace(scanner);
+	scanner->start = scanner->current;
+
 	for (;;)
 	{
 		const Token token = scanToken(scanner);
 		writeTokenArray(&scanner->tokenArray, token);
+
 		if (token.type == TOKEN_EOF)
 			break;
+
+		if (!skipWhitespace(scanner))
+			writeTokenArray(&scanner->tokenArray, errorTokenNoAdvance(scanner, "Expected whitespace before "
+				"next token. This was likely caused by a malformed integer literal."));
+
+		scanner->start = scanner->current;
 	}
 }
