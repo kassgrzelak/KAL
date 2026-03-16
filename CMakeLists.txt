@@ -14,6 +14,8 @@ add_executable(kal main.c
         src/Compiler.c
         include/Bytecode.h
         src/Bytecode.c
-        src/VM.c)
+        src/VM.c
+        include/instructions.h
+)
 
 target_include_directories(kal PRIVATE include)

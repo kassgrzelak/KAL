@@ -21,4 +21,6 @@ typedef struct
 void initVM(VM* vm);
 void freeVM(const VM* vm);
 
+void interpret(VM* vm, const char* source);
+
 #endif //KAL_VM_H

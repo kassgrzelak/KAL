@@ -10,7 +10,7 @@
 typedef enum
 {
 	// Instruction mnemonics. All instruction tokens MUST be placed immediately before TOKEN_LABEL_DECL.
-	TOKEN_NOP, TOKEN_LD, TOKEN_OUT, TOKEN_INC, TOKEN_JMP, TOKEN_HLT,
+	TOKEN_NOP, TOKEN_HLT, TOKEN_OUT, TOKEN_INC, TOKEN_DEC, TOKEN_JMP, TOKEN_MV,
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,

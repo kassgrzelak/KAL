@@ -17,5 +17,8 @@ void writeBytecode(Bytecode* bytecode, const uint8_t byte)
 
 void freeBytecode(const Bytecode* bytecode)
 {
+	if (!bytecode)
+		return;
+
 	free(bytecode->code);
 }

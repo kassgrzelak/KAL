@@ -27,8 +27,9 @@ static void repl()
 		}
 
 		Bytecode code;
+		size_t jumpTable[256];
 		initBytecode(&code);
-		compile(&code, NULL, line);
+		compile(&code, jumpTable, line);
 
 		for (int i = 0; i < code.count; ++i)
 			printf("%d ", code.code[i]);

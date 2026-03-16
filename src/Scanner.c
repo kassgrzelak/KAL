@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "memory.h"
+#include "instructions.h"
 
 static void initTokenArray(TokenArray* array)
 {
@@ -22,6 +23,9 @@ static void writeTokenArray(TokenArray* array, const Token token)
 
 static void freeTokenArray(const TokenArray* array)
 {
+	if (!array)
+		return;
+
 	free(array->tokens);
 }
 
@@ -60,23 +64,24 @@ static void printToken(const TokenType type, const char* start, const int length
 
 	switch (type)
 	{
-	TYPE_CASE(TOKEN_NOP);
-	TYPE_CASE(TOKEN_HLT);
-	TYPE_CASE(TOKEN_OUT);
-	TYPE_CASE(TOKEN_INC);
-	TYPE_CASE(TOKEN_JMP);
-	TYPE_CASE(TOKEN_LD);
+		TYPE_CASE(TOKEN_NOP);
+		TYPE_CASE(TOKEN_HLT);
+		TYPE_CASE(TOKEN_OUT);
+		TYPE_CASE(TOKEN_INC);
+		TYPE_CASE(TOKEN_DEC);
+		TYPE_CASE(TOKEN_JMP);
+		TYPE_CASE(TOKEN_MV);
 
-	TYPE_CASE(TOKEN_LABEL_DECL);
+		TYPE_CASE(TOKEN_LABEL_DECL);
 
-	TYPE_CASE(TOKEN_CONSTANT);
-	TYPE_CASE(TOKEN_REGISTER);
-	TYPE_CASE(TOKEN_MEMORY);
-	TYPE_CASE(TOKEN_POINTER);
-	TYPE_CASE(TOKEN_LABEL_OPERAND);
+		TYPE_CASE(TOKEN_CONSTANT);
+		TYPE_CASE(TOKEN_REGISTER);
+		TYPE_CASE(TOKEN_MEMORY);
+		TYPE_CASE(TOKEN_POINTER);
+		TYPE_CASE(TOKEN_LABEL_OPERAND);
 
-	TYPE_CASE(TOKEN_EOF);
-	TYPE_CASE(TOKEN_ERROR);
+		TYPE_CASE(TOKEN_EOF);
+		TYPE_CASE(TOKEN_ERROR);
 
 	default:
 		printf("           UNKNOWN |");
@@ -221,37 +226,26 @@ static bool skipWhitespace(Scanner* scanner)
 	}
 }
 
-static Token checkMnemonic(Scanner* scanner, const int start, const int length, const char* rest, TokenType type)
-{
-	if (scanner->current - scanner->start != start + length)
-		return errorToken(scanner, "Unknown instruction mnemonic.");
-	for (int i = 0; i < length; ++i)
-		if (tolower((scanner->start + start)[i]) != rest[i])
-			return errorToken(scanner, "Unknown instruction mnemonic.");
-
-	return makeToken(scanner, type);
-}
-
 static Token mnemonic(Scanner* scanner)
 {
-	switch (tolower(scanner->start[0]))
-	{
-	case 'h':
-		return checkMnemonic(scanner, 1, 2, "lt", TOKEN_HLT);
-	case 'i':
-		return checkMnemonic(scanner, 1, 2, "nc", TOKEN_INC);
-	case 'j':
-		return checkMnemonic(scanner, 1, 2, "mp", TOKEN_JMP);
-	case 'l':
-		return checkMnemonic(scanner, 1, 1, "d", TOKEN_LD);
-	case 'n':
-		return checkMnemonic(scanner, 1, 2, "op", TOKEN_NOP);
-	case 'o':
-		return checkMnemonic(scanner, 1, 2, "ut", TOKEN_OUT);
+	const size_t length = scanner->current - scanner->start;
 
-	default:
-		return errorToken(scanner, "Unknown instruction mnemonic.");
+	for (int i = 0; i < INSTR_COUNT; ++i)
+	{
+		const char* mnemonic = instrTable[i].mnemonic;
+
+		if (length != strlen(mnemonic))
+			skip:
+			continue;
+
+		for (size_t j = 0; j < length; ++j)
+			if (tolower(scanner->start[j]) != mnemonic[j])
+				goto skip;
+
+		return makeToken(scanner, instrTable[i].token);
 	}
+
+	return errorToken(scanner, "Unkown instruction mnemonic.");
 }
 
 static Token identifier(Scanner* scanner, const bool labelOperand)
