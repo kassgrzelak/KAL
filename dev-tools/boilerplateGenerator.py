@@ -39,6 +39,18 @@ class Instruction:
         self.signatures = expand_signatures(signatures)
         self.template = template
 
+###########################
+# Instruction Definitions #
+###########################
+
+# A repetitive enough instruction is defined by its name, its signatures (as given in instruction-set.md), and a
+# template that defines how it will be executed.
+
+# The template is copy-pasted for each generated opcode, but with $1, $2, and so on being replaces with the first,
+# second, and so on operands to that instruction.
+
+# All signatures of an instruction must have the same operand count.
+
 mv_template = """uint8_t* mem = &$1;
     *mem = $2;"""
 mv = Instruction("MV", ["mc", "mm"], mv_template)
@@ -58,6 +70,10 @@ sub_template = """uint8_t* mem = &$1;
 sub = Instruction("SUB", ["mc", "mm"], sub_template)
 
 instructions = [mv, inc, dec, add, sub]
+
+###########################
+# Instruction Definitions #
+###########################
 
 def sig_letter_to_macro(letter: str) -> str:
     if letter == "C":
@@ -79,16 +95,11 @@ def fileCreationDateHeader() -> str:
 //
 """
 
-def printOpcodes(instr: Instruction) -> None:
-    for sig in instr.signatures:
-        print(f"\tX({instr.name}_{sig}) \\")
-    print()
-
-def generate_handlers(instr: Instruction) -> str:
+def generate_handlers(instr: Instruction) -> None:
     # Generate handlers.
     result = f"""{fileCreationDateHeader()}
-#ifndef KAL_{instr.name}_HANDLERS_INC
-#define KAL_{instr.name}_HANDLERS_INC
+#ifndef KAL_{instr.name}_HANDLERS_H
+#define KAL_{instr.name}_HANDLERS_H
 
 """
 
@@ -101,9 +112,32 @@ def generate_handlers(instr: Instruction) -> str:
 
         result += func
 
+    result += "#endif"
+
     print(f"Successfully generated handlers file for {instr.name.lower()}.")
 
-    return result + "#endif"
+    with open(f"generated/per-instruction/{instr.name.lower()}Handlers.h", "w+") as file:
+         file.write(result)
+
+def generate_handlers_file(instructions: List[Instruction]) -> None:
+    for instr in instructions:
+        generate_handlers(instr)
+
+    file_contents = f"""{fileCreationDateHeader()}
+#ifndef KAL_GENERATED_HANDLERS_H
+#define KAL_GENERATED_HANDLERS_H
+
+"""
+
+    for instr in instructions:
+        file_contents += f'#include "generated/per-instruction/{instr.name.lower()}Handlers.h"\n'
+
+    file_contents += "\n#endif"
+
+    with open("generated/generatedHandlers.h", "w+") as file:
+        file.write(file_contents)
+
+    print("\nSuccessfully created combined handlers file.\n")
 
 def sig_letter_to_sig_digit(letter: str) -> str:
     if letter == "C":
@@ -119,10 +153,10 @@ def sig_letter_to_sig_digit(letter: str) -> str:
 
     raise ValueError(f"Invalid signature letter '{letter}'.")
 
-def generate_variants(instr: Instruction) -> str:
+def generate_variants(instr: Instruction) -> None:
     result = f"""{fileCreationDateHeader()}
-#ifndef KAL_{instr.name}_VARIANTS_INC
-#define KAL_{instr.name}_VARIANTS_INC
+#ifndef KAL_{instr.name}_VARIANTS_H
+#define KAL_{instr.name}_VARIANTS_H
 
 static const InstrVariant {instr.name.lower()}Variants[] = {{
 """
@@ -130,21 +164,90 @@ static const InstrVariant {instr.name.lower()}Variants[] = {{
     for sig in instr.signatures:
         result += f"\t{{OP_{instr.name}_{sig}, {len(sig) + 1}, 0{''.join([sig_letter_to_sig_digit(letter) for letter in sig])}}},\n"
 
+    result += "};\n\n#endif"
+
     print(f"Successfully generated variants file for {instr.name.lower()}.")
 
-    return result + "};\n\n#endif"
+    with open(f"generated/per-instruction/{instr.name.lower()}Variants.h", "w+") as file:
+        file.write(result)
 
-def generate_all(instr: Instruction) -> None:
-    print()
-    printOpcodes(instr)
+def generate_variants_file(instructions: List[Instruction]) -> None:
+    for instr in instructions:
+        generate_variants(instr)
 
-    with open(f"generated/{instr.name.lower()}Handlers.inc", "w+") as file:
-        file.write(generate_handlers(instr))
+    file_contents = f"""{fileCreationDateHeader()}
+#ifndef KAL_GENERATED_VARIANTS_H
+#define KAL_GENERATED_VARIANTS_H
 
-    with open(f"generated/{instr.name.lower()}Variants.inc", "w+") as file:
-        file.write(generate_variants(instr))
+"""
 
-    print(f"Successfully generated all files for {instr.name.lower()}.")
+    for instr in instructions:
+        file_contents += f'#include "generated/per-instruction/{instr.name.lower()}Variants.h"\n'
 
-for instr in instructions:
-    generate_all(instr)
+    file_contents += "\n#endif"
+
+    with open("generated/generatedVariants.h", "w+") as file:
+        file.write(file_contents)
+
+    print("\nSuccessfully created combined variants file.\n")
+
+def generate_opcodes(instructions: List[Instruction]) -> None:
+    result = f"""{fileCreationDateHeader()}
+#ifndef KAL_GENERATED_OPCODES_H
+#define KAL_GENERATED_OPCODES_H
+
+#define GENERATED_OPCODES_X \\
+"""
+
+    for instr in instructions:
+        for sig in instr.signatures:
+            result += f"\tX({instr.name}_{sig}) \\\n"
+
+    result += "\n#endif"
+
+    with open("generated/generatedOpcodes.h", "w+") as file:
+        file.write(result)
+
+    print("\nSuccessfully created opcodes file.")
+
+def generate_mnemonic_tokens(instructions: List[Instruction]) -> None:
+    result = f"""{fileCreationDateHeader()}
+#ifndef KAL_GENERATED_MNEMONIC_TOKENS_H
+#define KAL_GENERATED_MNEMONIC_TOKENS_H
+
+#define GENERATED_MNEMONIC_TOKENS_X \\
+"""
+
+    for instr in instructions:
+        result += f"\tX({instr.name}) \\\n"
+
+    result += "\n#endif"
+
+    with open("generated/generatedMnemonicTokens.h", "w+") as file:
+        file.write(result)
+
+    print("\nSuccessfully created mnemonic tokens file.")
+    
+def generate_table_entries(instructions: List[Instruction]) -> None:
+    result = f"""{fileCreationDateHeader()}
+#ifndef KAL_GENERATED_TABLE_ENTRIES_H
+#define KAL_GENERATED_TABLE_ENTRIES_H
+
+#define GENERATED_TABLE_ENTRIES \\
+"""
+
+    for instr in instructions:
+        result += f"\tTABLE_ENTRY({instr.name}, {instr.name.lower()}, {len(instr.signatures[0])}) \\\n"
+
+    result += "\n#endif"
+
+    with open("generated/generatedTableEntries.h", "w+") as file:
+        file.write(result)
+
+    print("\nSuccessfully created table entries file.")
+
+generate_handlers_file(instructions)
+generate_variants_file(instructions)
+generate_opcodes(instructions)
+generate_mnemonic_tokens(instructions)
+generate_table_entries(instructions)

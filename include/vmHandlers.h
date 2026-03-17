@@ -29,9 +29,6 @@ static void OUT_PHandler(VM* vm)
 	printf("%d\n", PTR());
 }
 
-#include "generated/incHandlers.inc"
-#include "generated/decHandlers.inc"
-
 static void JMP_CHandler(VM* vm)
 {
 	runtimeError(vm, "Not implemented.");
@@ -57,8 +54,6 @@ static void JMP_LHandler(VM* vm)
 	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
 }
 
-#include "generated/mvHandlers.inc"
-#include "generated/addHandlers.inc"
-#include "generated/subHandlers.inc"
+#include "generated/generatedHandlers.h"
 
 #endif //KAL_VM_HANDLERS_INC

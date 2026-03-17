@@ -6,7 +6,7 @@
 #define KAL_SCANNER_H
 
 #include "common.h"
-#include "mnemonicTokens.inc"
+#include "mnemonicTokens.h"
 
 typedef enum
 {

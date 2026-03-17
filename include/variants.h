@@ -15,9 +15,6 @@ static const InstrVariant outVariants[] = {
 	{OP_OUT_P, 2, 04},
 };
 
-#include "generated/incVariants.inc"
-#include "generated/decVariants.inc"
-
 static const InstrVariant jmpVariants[] = {
 	{OP_JMP_C, 2, 01},
 	{OP_JMP_R, 2, 02},
@@ -26,8 +23,6 @@ static const InstrVariant jmpVariants[] = {
 	{OP_JMP_L, 2, 05},
 };
 
-#include "generated/mvVariants.inc"
-#include "generated/addVariants.inc"
-#include "generated/subVariants.inc"
+#include "generated/generatedVariants.h"
 
 #endif // KAL_VARIANTS_INC

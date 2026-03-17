@@ -29,7 +29,7 @@ static void runtimeError(const VM* vm, const char* message)
 #define MEM() vm->ram[CONST()]
 #define PTR() vm->ram[vm->registers[CONST()]]
 
-#include "vmHandlers.inc"
+#include "vmHandlers.h"
 
 typedef void (*VMHandler)(VM*);
 

@@ -5,14 +5,18 @@
 #define KAL_INSTRUCTIONS_H
 
 #include "Scanner.h"
-#include "opcodes.inc"
+#include "opcodes.h"
+#include "generated/generatedTableEntries.h"
 
-// Checklist for adding a new instruction:
-// 1. Add the token to mnemonicTokens.inc.
-// 2. Add every opcode for the instruction to opcodes.inc (or generate them with boilerplateGenerator.py).
-// 3. Add every variant to variants.inc (or generate them with boilerplateGenerator.py).
+// Steps to add a new instruction:
+// If the instructions is repetitive enough, you can add its template to dev-tools/boilerplateGenerator.py and have it
+// generate all the code for you, no other work needed.
+// Otherwise, you'll have to:
+// 1. Add the token to mnemonicTokens.h.
+// 2. Add every opcode for the instruction to opcodes.h.
+// 3. Add every variant to variants.h.
 // 4. Add a table entry to instructions.h.
-// 5. Add handlers to VM.c (or generate them with boilerplateGenerator.py).
+// 5. Add handlers to VM.c.
 
 typedef enum
 {
@@ -31,7 +35,7 @@ typedef struct
 	uint16_t signature;
 } InstrVariant;
 
-#include "variants.inc"
+#include "variants.h"
 
 typedef struct
 {
@@ -49,12 +53,8 @@ static const InstrDef instrTable[] = {
 	TABLE_ENTRY(NOP, nop, 0)
 	TABLE_ENTRY(HLT, hlt, 0)
 	TABLE_ENTRY(OUT, out, 1)
-	TABLE_ENTRY(INC, inc, 1)
-	TABLE_ENTRY(DEC, dec, 1)
 	TABLE_ENTRY(JMP, jmp, 1)
-	TABLE_ENTRY(MV, mv, 2)
-	TABLE_ENTRY(ADD, add, 2)
-	TABLE_ENTRY(SUB, sub, 2)
+	GENERATED_TABLE_ENTRIES
 };
 
 #undef TABLE_ENTRY

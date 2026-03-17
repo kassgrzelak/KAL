@@ -5,15 +5,13 @@
 #ifndef KAL_MNEMONIC_TOKENS_INC
 #define KAL_MNEMONIC_TOKENS_INC
 
+#include "generated/generatedMnemonicTokens.h"
+
 #define MNEMONIC_TOKENS_X \
 	X(NOP) \
 	X(HLT) \
 	X(OUT) \
-	X(INC) \
-	X(DEC) \
 	X(JMP) \
-	X(MV) \
-	X(ADD) \
-	X(SUB) \
+	GENERATED_MNEMONIC_TOKENS_X
 
 #endif //KAL_MNEMONIC_TOKENS_INC

@@ -384,6 +384,9 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 	printf("------------------------------\n");
 #endif
 
+	if (peek(&compiler)->type == TOKEN_ERROR)
+		errorAt(&compiler, peek(&compiler), peek(&compiler)->start);
+
 	while (peek(&compiler)->type != TOKEN_EOF)
 	{
 		statement(&compiler);
