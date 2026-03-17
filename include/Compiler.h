@@ -8,20 +8,10 @@
 #include "Bytecode.h"
 #include "Scanner.h"
 
-// IMPORTANT: Checklist for adding a new instruction:
-// - Add token to TokenType enum in Scanner.h.
-// - Add scanning support in mnemonic() in Scanner.c.
-// - Add debug printing support in printToken() in Scanner.c.
-// - Add opcodes for all addressing modes to appropriate opcode enum in Compiler.h.
-// - Add offset to appropriate getOffset() function in Compiler.c.
-// - Add parser to Compiler.c to handle all addressing modes.
-// - Add parser to mnemonicParserTable in Compiler.c.
-// - Add execution support to VM.c.
-
 typedef enum
 {
-	// Note octal values. An AM value fits in three bits or one octal digit, and this is how instruction signatures will
-	// be written. E.g., 034 for 'instr M P'.
+	// Note octal values. An AM value fits in three bits or one octal digit, and this is how instruction signatures are
+	// written. E.g., 034 for 'instr M P'.
 	AM_NONE  = 00,
 	AM_CONST = 01,
 	AM_REG   = 02,

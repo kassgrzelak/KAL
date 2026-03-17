@@ -160,7 +160,7 @@ static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
 	return 0;
 }
 
-static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
+static uint8_t parseNumberOperand(const Token* token)
 {
 	if (token->length >= 2 && token->start[0] == '0')
 	{
@@ -182,8 +182,33 @@ static uint8_t parseOperand(Compiler* compiler, const int index)
 	if (token->type == TOKEN_LABEL_OPERAND)
 		return parseLabelOperand(compiler, token);
 
-	return parseNumberOperand(compiler, token);
+	return parseNumberOperand(token);
 }
+
+#ifdef DEBUG_PRINT_BYTECODE
+static void printOpcode(const size_t byte, const uint8_t opcode)
+{
+	printf("0x%04lx | ", byte);
+
+	switch (opcode)
+	{
+#define X(opcode) \
+	case OP_##opcode: printf("OP_%-6s |\n", #opcode); break;
+		OPCODES_X
+#undef X
+
+	default:
+		printf("%-9s |\n", "UNKNOWN");
+	}
+}
+#endif
+
+#ifdef DEBUG_PRINT_BYTECODE
+static void printOperand(const uint8_t operand)
+{
+	printf("       |           | %d\n", operand);
+}
+#endif
 
 static void parseInstruction(Compiler* compiler)
 {
@@ -220,9 +245,20 @@ static void parseInstruction(Compiler* compiler)
 	if (!variant)
 		return noAddressingModeError(compiler);
 
+#ifdef DEBUG_PRINT_BYTECODE
+	printOpcode(compiler->bytecode->count, variant->opcode);
+#endif
+
 	emitByte(compiler, variant->opcode);
+
 	for (int i = 0; i < compiler->operandCount; ++i)
+	{
+#ifdef DEBUG_PRINT_BYTECODE
+		printOperand(parseOperand(compiler, i));
+#endif
+
 		emitByte(compiler, parseOperand(compiler, i));
+	}
 }
 
 static void statement(Compiler* compiler)
@@ -245,6 +281,18 @@ static void statement(Compiler* compiler)
 	consumeOperands(compiler);
 	parseInstruction(compiler);
 }
+
+#ifdef DEBUG_PRINT_BYTECODE
+static void printLabelDecls(const Compiler* compiler, const int labelsSeen)
+{
+	printf("\n=== LABEL DECLARATIONS ===\n");
+	printf("Index | Label name\n");
+	printf("-------------------\n");
+
+	for (int i = 0; i < labelsSeen; ++i)
+		printf("%03d   | '%.*s'\n", i, compiler->labelLengths[i], compiler->labelNames[i]);
+}
+#endif
 
 bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 {
@@ -271,14 +319,26 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 		if (token.type != TOKEN_LABEL_DECL)
 			continue;
 		if (labelsSeen == 256)
-			return false; // TODO: Print error.
+		{
+			errorAt(&compiler, &token, "Exceeded the limit of 256 labels in a single program.");
+			freeScanner(&scanner);
+			return false;
+		}
 
 		compiler.labelNames[labelsSeen] = token.start;
 		compiler.labelLengths[labelsSeen++] = token.length;
 	}
 
-	for (int i = 0; i < labelsSeen; ++i)
-		printf("%.*s\n", compiler.labelLengths[i], compiler.labelNames[i]);
+#ifdef DEBUG_PRINT_BYTECODE
+	if (labelsSeen > 0)
+		printLabelDecls(&compiler, labelsSeen);
+#endif
+
+#ifdef DEBUG_PRINT_BYTECODE
+	printf("\n=== BYTECODE ===\n");
+	printf("byte   | Opcode    | Operands\n");
+	printf("------------------------------\n");
+#endif
 
 	while (peek(&compiler)->type != TOKEN_EOF)
 	{
@@ -289,6 +349,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 	}
 
 	// Add hlt instruction in case a label was placed at the end of a program with no instructions after.
+	printOpcode(compiler.bytecode->count, OP_HLT);
 	emitByte(&compiler, OP_HLT);
 
 	freeScanner(&scanner);

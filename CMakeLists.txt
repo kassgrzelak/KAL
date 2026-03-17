@@ -16,6 +16,8 @@ add_executable(kal main.c
         src/Bytecode.c
         src/VM.c
         include/instructions.h
+        include/opcodes.inc
+        include/mnemonicTokens.inc
 )
 
 target_include_directories(kal PRIVATE include)

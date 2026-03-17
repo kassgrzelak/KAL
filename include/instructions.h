@@ -5,24 +5,14 @@
 #define KAL_INSTRUCTIONS_H
 
 #include "Scanner.h"
+#include "opcodes.inc"
 
 typedef enum
 {
-	OP_NOP,
-
-	OP_HLT,
-
-	OP_OUT_C, OP_OUT_R, OP_OUT_M, OP_OUT_P,
-
-	OP_INC_R, OP_INC_M, OP_INC_P,
-
-	OP_DEC_R, OP_DEC_M, OP_DEC_P,
-
-	OP_JMP_C, OP_JMP_R, OP_JMP_M, OP_JMP_P, OP_JMP_L,
-
-	OP_MV_RC, OP_MV_RR, OP_MV_RM, OP_MV_RP,
-	OP_MV_MC, OP_MV_MR, OP_MV_MM, OP_MV_MP,
-	OP_MV_PC, OP_MV_PR, OP_MV_PM, OP_MV_PP,
+#define X(opcode) \
+	OP_##opcode,
+	OPCODES_X
+#undef X
 
 	OPCODE_COUNT
 } Opcode;

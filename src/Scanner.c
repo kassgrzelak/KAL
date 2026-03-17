@@ -64,13 +64,10 @@ static void printToken(const TokenType type, const char* start, const int length
 
 	switch (type)
 	{
-		TYPE_CASE(TOKEN_NOP);
-		TYPE_CASE(TOKEN_HLT);
-		TYPE_CASE(TOKEN_OUT);
-		TYPE_CASE(TOKEN_INC);
-		TYPE_CASE(TOKEN_DEC);
-		TYPE_CASE(TOKEN_JMP);
-		TYPE_CASE(TOKEN_MV);
+#define X(mnemonic) \
+	TYPE_CASE(TOKEN_##mnemonic);
+		MNEMONIC_TOKENS_X
+#undef X
 
 		TYPE_CASE(TOKEN_LABEL_DECL);
 
@@ -377,8 +374,9 @@ static Token scanToken(Scanner* scanner)
 void tokenize(Scanner* scanner)
 {
 #ifdef DEBUG_PRINT_TOKENS
+	printf("\n=== TOKENS ===\n");
 	printf("Line | Token type           | Lexeme\n");
-	printf("------------------------------------\n");
+	printf("-------------------------------------\n");
 #endif
 
 	skipWhitespace(scanner);

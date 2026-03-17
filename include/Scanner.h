@@ -6,11 +6,14 @@
 #define KAL_SCANNER_H
 
 #include "common.h"
+#include "mnemonicTokens.inc"
 
 typedef enum
 {
-	// Instruction mnemonics. All instruction tokens MUST be placed immediately before TOKEN_LABEL_DECL.
-	TOKEN_NOP, TOKEN_HLT, TOKEN_OUT, TOKEN_INC, TOKEN_DEC, TOKEN_JMP, TOKEN_MV,
+#define X(mnemonic) \
+	TOKEN_##mnemonic,
+	MNEMONIC_TOKENS_X
+#undef X
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,

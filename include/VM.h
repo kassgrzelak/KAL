@@ -18,9 +18,16 @@ typedef struct
 	size_t jumpTable[256];
 } VM;
 
+typedef enum
+{
+	INTERPRET_OK,
+	INTERPRET_COMPILE_ERROR,
+	INTERPRET_RUNTIME_ERROR
+} InterpretResult;
+
 void initVM(VM* vm);
 void freeVM(const VM* vm);
 
-void interpret(VM* vm, const char* source);
+InterpretResult interpret(VM* vm, const char* source);
 
 #endif //KAL_VM_H

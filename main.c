@@ -14,6 +14,7 @@ static void repl()
 
 	char line[1024];
 	VM vm;
+	initVM(&vm);
 
 	for (;;)
 	{
@@ -26,14 +27,10 @@ static void repl()
 			break;
 		}
 
-		Bytecode code;
-		size_t jumpTable[256];
-		initBytecode(&code);
-		compile(&code, jumpTable, line);
-
-		for (int i = 0; i < code.count; ++i)
-			printf("%d ", code.code[i]);
+		interpret(&vm, line);
 	}
+
+	freeVM(&vm);
 }
 
 static char* readFile(const char* path)
@@ -71,6 +68,11 @@ static char* readFile(const char* path)
 static void runFile(const char* path)
 {
 	char* source = readFile(path);
+
+	VM vm;
+	initVM(&vm);
+	interpret(&vm, source);
+
 	free(source);
 }
 
