@@ -35,5 +35,29 @@
 	X(MV_PR) \
 	X(MV_PM) \
 	X(MV_PP) \
+	X(ADD_RC) \
+	X(ADD_RR) \
+	X(ADD_RM) \
+	X(ADD_RP) \
+	X(ADD_MC) \
+	X(ADD_MR) \
+	X(ADD_MM) \
+	X(ADD_MP) \
+	X(ADD_PC) \
+	X(ADD_PR) \
+	X(ADD_PM) \
+	X(ADD_PP) \
+	X(SUB_RC) \
+	X(SUB_RR) \
+	X(SUB_RM) \
+	X(SUB_RP) \
+	X(SUB_MC) \
+	X(SUB_MR) \
+	X(SUB_MM) \
+	X(SUB_MP) \
+	X(SUB_PC) \
+	X(SUB_PR) \
+	X(SUB_PM) \
+	X(SUB_PP) \
 
 #endif //KAL_OPCODES_INC

@@ -7,6 +7,13 @@
 #include "Scanner.h"
 #include "opcodes.inc"
 
+// Checklist for adding a new instruction:
+// 1. Add the token to mnemonicTokens.inc.
+// 2. Add every opcode for the instruction to opcodes.inc (or generate them with boilerplateGenerator.py).
+// 3. Add every variant to variants.inc (or generate them with boilerplateGenerator.py).
+// 4. Add a table entry to instructions.h.
+// 5. Add handlers to VM.c (or generate them with boilerplateGenerator.py).
+
 typedef enum
 {
 #define X(opcode) \
@@ -46,6 +53,8 @@ static const InstrDef instrTable[] = {
 	TABLE_ENTRY(DEC, dec, 1)
 	TABLE_ENTRY(JMP, jmp, 1)
 	TABLE_ENTRY(MV, mv, 2)
+	TABLE_ENTRY(ADD, add, 2)
+	TABLE_ENTRY(SUB, sub, 2)
 };
 
 #undef TABLE_ENTRY

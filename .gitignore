@@ -1,2 +1,4 @@
 # Jetbrains IDE settings.
 .idea/
+# Python virtual environment.
+.venv/

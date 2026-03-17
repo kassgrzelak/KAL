@@ -13,5 +13,7 @@
 	X(DEC) \
 	X(JMP) \
 	X(MV) \
+	X(ADD) \
+	X(SUB) \
 
 #endif //KAL_MNEMONIC_TOKENS_INC

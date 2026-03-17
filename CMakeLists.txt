@@ -18,6 +18,9 @@ add_executable(kal main.c
         include/instructions.h
         include/opcodes.inc
         include/mnemonicTokens.inc
+        include/vmHandlers.inc
 )
 
-target_include_directories(kal PRIVATE include)
+target_include_directories(kal PRIVATE
+        include
+        ${PROJECT_SOURCE_DIR})
