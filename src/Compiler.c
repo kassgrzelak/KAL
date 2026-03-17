@@ -90,6 +90,20 @@ static void noAddressingModeError(Compiler* compiler)
 			"operands.");
 }
 
+static void warningAt(Compiler* compiler, const Token* token, const char* message)
+{
+	fprintf(stderr, "[line %d] Warning", token->line);
+
+	if (token->type == TOKEN_EOF)
+		fprintf(stderr, " at end");
+	else if (token->type == TOKEN_ERROR)
+	{ /* Nothing. */ }
+	else
+		fprintf(stderr, " at '%.*s'", token->length, token->start);
+
+	fprintf(stderr, ": %s\n", message);
+}
+
 static const Token* peek(const Compiler* compiler)
 {
 	return compiler->current;
@@ -160,19 +174,35 @@ static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
 	return 0;
 }
 
-static uint8_t parseNumberOperand(const Token* token)
+static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
 {
 	if (token->length >= 2 && token->start[0] == '0')
 	{
 		if (tolower(token->start[1]) == 'b')
-			return strtol(token->start + 2, NULL, 2);
+		{
+			const long number = strtol(token->start + 2, NULL, 2);
+			if (number > 255)
+				warningAt(compiler, token, "Truncated integer literal.");
+			return number;
+		}
 		if (tolower(token->start[1]) == 'x')
-			return strtol(token->start + 2, NULL, 16);
+		{
+			const long number = strtol(token->start + 2, NULL, 16);
+			if (number > 255)
+				warningAt(compiler, token, "Truncated integer literal.");
+			return number;
+		}
 
-		return strtol(token->start + 1, NULL, 8);
+		const long number = strtol(token->start + 1, NULL, 8);
+		if (number > 255)
+			warningAt(compiler, token, "Truncated integer literal.");
+		return number;
 	}
 
-	return strtol(token->start, NULL, 10);
+	const long number = strtol(token->start, NULL, 10);
+	if (number > 255)
+		warningAt(compiler, token, "Truncated integer literal.");
+	return number;
 }
 
 static uint8_t parseOperand(Compiler* compiler, const int index)
@@ -182,7 +212,7 @@ static uint8_t parseOperand(Compiler* compiler, const int index)
 	if (token->type == TOKEN_LABEL_OPERAND)
 		return parseLabelOperand(compiler, token);
 
-	return parseNumberOperand(token);
+	return parseNumberOperand(compiler, token);
 }
 
 #ifdef DEBUG_PRINT_BYTECODE
@@ -209,6 +239,16 @@ static void printOperand(const uint8_t operand)
 	printf("       |           | %d\n", operand);
 }
 #endif
+
+static void checkOperandValue(Compiler* compiler, const uint8_t value, const Token* token)
+{
+	if (token->type == TOKEN_REGISTER)
+		if (value >= 8)
+			errorAt(compiler, token, "Invalid register index.");
+	if (token->type == TOKEN_POINTER)
+		if (value >= 8)
+			errorAt(compiler, token, "Invalid poitner index.");
+}
 
 static void parseInstruction(Compiler* compiler)
 {
@@ -253,11 +293,15 @@ static void parseInstruction(Compiler* compiler)
 
 	for (int i = 0; i < compiler->operandCount; ++i)
 	{
+		const uint8_t operand = parseOperand(compiler, i);
+
+		checkOperandValue(compiler, operand, compiler->operands[i]);
+
 #ifdef DEBUG_PRINT_BYTECODE
-		printOperand(parseOperand(compiler, i));
+		printOperand(operand);
 #endif
 
-		emitByte(compiler, parseOperand(compiler, i));
+		emitByte(compiler, operand);
 	}
 }
 
