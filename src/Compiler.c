@@ -396,7 +396,9 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 	}
 
 	// Add hlt instruction in case a label was placed at the end of a program with no instructions after.
+#ifdef DEBUG_PRINT_BYTECODE
 	printOpcode(compiler.bytecode->count, OP_HLT);
+#endif
 	emitByte(&compiler, OP_HLT);
 
 	freeScanner(&scanner);

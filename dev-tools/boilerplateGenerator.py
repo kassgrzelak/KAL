@@ -39,6 +39,10 @@ class Instruction:
         self.signatures = expand_signatures(signatures)
         self.template = template
 
+def C_op_template(op: str) -> str:
+    return f"""uint8_t* mem = &$1;
+    *mem {op}= $2;"""
+
 ###########################
 # Instruction Definitions #
 ###########################
@@ -51,9 +55,7 @@ class Instruction:
 
 # All signatures of an instruction must have the same operand count.
 
-mv_template = """uint8_t* mem = &$1;
-    *mem = $2;"""
-mv = Instruction("MV", ["mc", "mm"], mv_template)
+mv = Instruction("MV", ["mc", "mm"], C_op_template(""))
 
 inc_template = """++$1;"""
 inc = Instruction("INC", ["m"], inc_template)
@@ -61,15 +63,19 @@ inc = Instruction("INC", ["m"], inc_template)
 dec_template = """--$1;"""
 dec = Instruction("DEC", ["m"], dec_template)
 
-add_template = """uint8_t* mem = &$1;
-    *mem += $2;"""
-add = Instruction("ADD", ["mc", "mm"], add_template)
+add = Instruction("ADD", ["mc", "mm"], C_op_template("+"))
+sub = Instruction("SUB", ["mc", "mm"], C_op_template("-"))
+mul = Instruction("MUL", ["mc", "mm"], C_op_template("*"))
+div = Instruction("DIV", ["mc", "mm"], C_op_template("/"))
+and_ = Instruction("AND", ["mc", "mm"], C_op_template("&"))
+or_ = Instruction("OR", ["mc", "mm"], C_op_template("|"))
+xor = Instruction("XOR", ["mc", "mm"], C_op_template("^"))
 
-sub_template = """uint8_t* mem = &$1;
-    *mem -= $2;"""
-sub = Instruction("SUB", ["mc", "mm"], sub_template)
+not_template = """uint8_t* mem = &$1;
+    *mem = !$2;"""
+not_ = Instruction("NOT", ["mc", "mm"], not_template)
 
-instructions = [mv, inc, dec, add, sub]
+instructions = [mv, inc, dec, add, sub, mul, div, and_, or_, xor, not_]
 
 ###########################
 # Instruction Definitions #
