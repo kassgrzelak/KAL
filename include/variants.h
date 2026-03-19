@@ -8,13 +8,6 @@ static const InstrVariant nopVariants[] = {{OP_NOP, 1, 0}};
 
 static const InstrVariant hltVariants[] = {{OP_HLT, 1, 0}};
 
-static const InstrVariant outVariants[] = {
-	{OP_OUT_C, 2, 01},
-	{OP_OUT_R, 2, 02},
-	{OP_OUT_M, 2, 03},
-	{OP_OUT_P, 2, 04},
-};
-
 static const InstrVariant jmpVariants[] = {
 	{OP_JMP_C, 2, 01},
 	{OP_JMP_R, 2, 02},

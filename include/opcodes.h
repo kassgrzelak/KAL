@@ -10,10 +10,6 @@
 #define OPCODES_X \
 	X(NOP) \
 	X(HLT) \
-	X(OUT_C) \
-	X(OUT_R) \
-	X(OUT_M) \
-	X(OUT_P) \
 	X(JMP_C) \
 	X(JMP_R) \
 	X(JMP_M) \

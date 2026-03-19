@@ -7,6 +7,7 @@
 #include "Scanner.h"
 #include "opcodes.h"
 #include "generated/generatedTableEntries.h"
+#include "generated/generatedOpcodeLengths.h"
 
 // Steps to add a new instruction:
 // If the instructions is repetitive enough, you can add its template to dev-tools/boilerplateGenerator.py and have it
@@ -52,9 +53,19 @@ typedef struct
 static const InstrDef instrTable[] = {
 	TABLE_ENTRY(NOP, nop, 0)
 	TABLE_ENTRY(HLT, hlt, 0)
-	TABLE_ENTRY(OUT, out, 1)
 	TABLE_ENTRY(JMP, jmp, 1)
 	GENERATED_TABLE_ENTRIES
+};
+
+static const uint8_t opcodeLengthTable[] = {
+	[OP_NOP] = 1,
+	[OP_HLT] = 1,
+	[OP_JMP_C] = 2,
+	[OP_JMP_R] = 2,
+	[OP_JMP_M] = 2,
+	[OP_JMP_P] = 2,
+	[OP_JMP_L] = 2,
+	GENERATED_OPCODE_LENGTHS
 };
 
 #undef TABLE_ENTRY

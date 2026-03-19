@@ -311,7 +311,7 @@ static void statement(Compiler* compiler)
 	advance(compiler);
 
 	if (!isStatementStarter(nextToken->type))
-		return errorAt(compiler, compiler->current, "Expected instruction mnemonic or label declaration at"
+		return errorAt(compiler, compiler->current, "Expected instruction mnemonic or label declaration at "
 			"beginning of statement.");
 
 	if (nextToken->type == TOKEN_LABEL_DECL)

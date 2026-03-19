@@ -9,44 +9,28 @@ static void NOPHandler(VM* vm) { }
 
 static void HLTHandler(VM* vm) { }
 
-static void OUT_CHandler(VM* vm)
-{
-	printf("%d\n", CONST());
-}
-
-static void OUT_RHandler(VM* vm)
-{
-	printf("%d\n", REG());
-}
-
-static void OUT_MHandler(VM* vm)
-{
-	printf("%d\n", MEM());
-}
-
-static void OUT_PHandler(VM* vm)
-{
-	printf("%d\n", PTR());
-}
-
 static void JMP_CHandler(VM* vm)
 {
-	runtimeError(vm, "Not implemented.");
+	for (uint8_t skipNum = CONST(); skipNum > 0; --skipNum)
+		vm->ip += opcodeLengthTable[*vm->ip];
 }
 
 static void JMP_RHandler(VM* vm)
 {
-	runtimeError(vm, "Not implemented.");
+	for (uint8_t skipNum = REG(); skipNum > 0; --skipNum)
+		vm->ip += opcodeLengthTable[*vm->ip];
 }
 
 static void JMP_MHandler(VM* vm)
 {
-	runtimeError(vm, "Not implemented.");
+	for (uint8_t skipNum = MEM(); skipNum > 0; --skipNum)
+		vm->ip += opcodeLengthTable[*vm->ip];
 }
 
 static void JMP_PHandler(VM* vm)
 {
-	runtimeError(vm, "Not implemented.");
+	for (uint8_t skipNum = PTR(); skipNum > 0; --skipNum)
+		vm->ip += opcodeLengthTable[*vm->ip];
 }
 
 static void JMP_LHandler(VM* vm)

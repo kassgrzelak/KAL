@@ -10,7 +10,6 @@
 #define MNEMONIC_TOKENS_X \
 	X(NOP) \
 	X(HLT) \
-	X(OUT) \
 	X(JMP) \
 	GENERATED_MNEMONIC_TOKENS_X
 

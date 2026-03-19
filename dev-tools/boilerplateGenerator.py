@@ -57,6 +57,9 @@ def C_op_template(op: str) -> str:
 
 mv = Instruction("MV", ["mc", "mm"], C_op_template(""))
 
+out_template = """printf("%d\\n", $1);"""
+out = Instruction("OUT", ["c", "m"], out_template)
+
 inc_template = """++$1;"""
 inc = Instruction("INC", ["m"], inc_template)
 
@@ -67,6 +70,7 @@ add = Instruction("ADD", ["mc", "mm"], C_op_template("+"))
 sub = Instruction("SUB", ["mc", "mm"], C_op_template("-"))
 mul = Instruction("MUL", ["mc", "mm"], C_op_template("*"))
 div = Instruction("DIV", ["mc", "mm"], C_op_template("/"))
+
 and_ = Instruction("AND", ["mc", "mm"], C_op_template("&"))
 or_ = Instruction("OR", ["mc", "mm"], C_op_template("|"))
 xor = Instruction("XOR", ["mc", "mm"], C_op_template("^"))
@@ -75,7 +79,7 @@ not_template = """uint8_t* mem = &$1;
     *mem = !$2;"""
 not_ = Instruction("NOT", ["mc", "mm"], not_template)
 
-instructions = [mv, inc, dec, add, sub, mul, div, and_, or_, xor, not_]
+instructions = [mv, out, inc, dec, add, sub, mul, div, and_, or_, xor, not_]
 
 ###########################
 # Instruction Definitions #
@@ -252,8 +256,28 @@ def generate_table_entries(instructions: List[Instruction]) -> None:
 
     print("\nSuccessfully created table entries file.")
 
+def generate_opcode_lengths(instructions: List[Instruction]) -> None:
+    result = f"""{fileCreationDateHeader()}
+#ifndef KAL_GENERATED_OPCODE_LENGTHS_H
+#define KAL_GENERATED_OPCODE_LENGTHS_H
+
+#define GENERATED_OPCODE_LENGTHS \\
+"""
+
+    for instr in instructions:
+        for sig in instr.signatures:
+            result += f"\t[OP_{instr.name}_{sig}] = {len(sig) + 1}, \\\n"
+
+    result += "\n#endif"
+
+    with open("generated/generatedOpcodeLengths.h", "w+") as file:
+        file.write(result)
+
+    print("\nSuccessfully created opcode lengths file.")
+
 generate_handlers_file(instructions)
 generate_variants_file(instructions)
 generate_opcodes(instructions)
 generate_mnemonic_tokens(instructions)
 generate_table_entries(instructions)
+generate_opcode_lengths(instructions)
