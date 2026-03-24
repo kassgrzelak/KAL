@@ -33,11 +33,13 @@ class Instruction:
     name: str
     signatures: List[str]
     template: str
+    generate_variants: bool
 
-    def __init__(self, name: str, signatures: List[str], template: str) -> None:
+    def __init__(self, name: str, signatures: List[str], template: str, generate_variants: bool = True) -> None:
         self.name = name
         self.signatures = expand_signatures(signatures)
         self.template = template
+        self.generate_variants = generate_variants
 
 def C_op_template(op: str) -> str:
     return f"""uint8_t* mem = &$1;
@@ -79,7 +81,32 @@ not_template = """uint8_t* mem = &$1;
     *mem = !$2;"""
 not_ = Instruction("NOT", ["mc", "mm"], not_template)
 
-instructions = [mv, out, inc, dec, add, sub, mul, div, and_, or_, xor, not_]
+jmp_template = """for (uint8_t skipNum = $1; skipNum > 0; --skipNum)
+	vm->ip += opcodeLengthTable[*vm->ip];"""
+jmp = Instruction("JMP", ["c", "m"], jmp_template, False)
+
+# FIXME: Constant conditional jump instructions causing segfaults.
+jmpz_template = """if ($1 != 0)
+    {
+        vm->ip += 2;
+	    return;
+    }
+
+	for (uint8_t skipNum = $2; skipNum > 0; --skipNum)
+		vm->ip += opcodeLengthTable[*vm->ip];"""
+jmpz = Instruction("JMPZ", ["mc", "mm"], jmpz_template, False)
+
+jmpnz_template = """if ($1 == 0)
+    {
+        vm->ip += 2;
+	    return;
+    }
+
+	for (uint8_t skipNum = $2; skipNum > 0; --skipNum)
+		vm->ip += opcodeLengthTable[*vm->ip];"""
+jmpnz = Instruction("JMPNZ", ["mc", "mm"], jmpnz_template, False)
+
+instructions = [mv, out, inc, dec, add, sub, mul, div, and_, or_, xor, not_, jmp, jmpz, jmpnz]
 
 ###########################
 # Instruction Definitions #
@@ -183,7 +210,8 @@ static const InstrVariant {instr.name.lower()}Variants[] = {{
 
 def generate_variants_file(instructions: List[Instruction]) -> None:
     for instr in instructions:
-        generate_variants(instr)
+        if instr.generate_variants:
+            generate_variants(instr)
 
     file_contents = f"""{fileCreationDateHeader()}
 #ifndef KAL_GENERATED_VARIANTS_H
@@ -192,7 +220,8 @@ def generate_variants_file(instructions: List[Instruction]) -> None:
 """
 
     for instr in instructions:
-        file_contents += f'#include "generated/per-instruction/{instr.name.lower()}Variants.h"\n'
+        if instr.generate_variants:
+            file_contents += f'#include "generated/per-instruction/{instr.name.lower()}Variants.h"\n'
 
     file_contents += "\n#endif"
 

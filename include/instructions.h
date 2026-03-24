@@ -16,8 +16,9 @@
 // 1. Add the token to mnemonicTokens.h.
 // 2. Add every opcode for the instruction to opcodes.h.
 // 3. Add every variant to variants.h.
-// 4. Add a table entry to instructions.h.
-// 5. Add handlers to VM.c.
+// 4. Add an instruction table entry to instructions.h.
+// 5. Add all opcode lengths to the opcode lengths table in instructions.h.
+// 6. Add handlers to vmHandlers.h.
 
 typedef enum
 {
@@ -53,18 +54,19 @@ typedef struct
 static const InstrDef instrTable[] = {
 	TABLE_ENTRY(NOP, nop, 0)
 	TABLE_ENTRY(HLT, hlt, 0)
-	TABLE_ENTRY(JMP, jmp, 1)
 	GENERATED_TABLE_ENTRIES
 };
 
 static const uint8_t opcodeLengthTable[] = {
 	[OP_NOP] = 1,
 	[OP_HLT] = 1,
-	[OP_JMP_C] = 2,
-	[OP_JMP_R] = 2,
-	[OP_JMP_M] = 2,
-	[OP_JMP_P] = 2,
 	[OP_JMP_L] = 2,
+	[OP_JMPZ_RL] = 3,
+	[OP_JMPZ_ML] = 3,
+	[OP_JMPZ_PL] = 3,
+	[OP_JMPNZ_RL] = 3,
+	[OP_JMPNZ_ML] = 3,
+	[OP_JMPNZ_PL] = 3,
 	GENERATED_OPCODE_LENGTHS
 };
 

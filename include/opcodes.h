@@ -10,11 +10,13 @@
 #define OPCODES_X \
 	X(NOP) \
 	X(HLT) \
-	X(JMP_C) \
-	X(JMP_R) \
-	X(JMP_M) \
-	X(JMP_P) \
 	X(JMP_L) \
+	X(JMPZ_RL) \
+	X(JMPZ_ML) \
+	X(JMPZ_PL) \
+	X(JMPNZ_RL) \
+	X(JMPNZ_ML) \
+	X(JMPNZ_PL) \
 	GENERATED_OPCODES_X
 
 #endif //KAL_OPCODES_INC

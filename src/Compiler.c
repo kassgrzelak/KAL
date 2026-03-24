@@ -223,7 +223,7 @@ static void printOpcode(const size_t byte, const uint8_t opcode)
 	switch (opcode)
 	{
 #define X(opcode) \
-	case OP_##opcode: printf("OP_%-6s |\n", #opcode); break;
+	case OP_##opcode: printf("OP_%-12s |\n", #opcode); break;
 		OPCODES_X
 #undef X
 
@@ -236,7 +236,7 @@ static void printOpcode(const size_t byte, const uint8_t opcode)
 #ifdef DEBUG_PRINT_BYTECODE
 static void printOperand(const uint8_t operand)
 {
-	printf("       |           | %d\n", operand);
+	printf("       |                 | %d\n", operand);
 }
 #endif
 
@@ -380,7 +380,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 
 #ifdef DEBUG_PRINT_BYTECODE
 	printf("\n=== BYTECODE ===\n");
-	printf("byte   | Opcode    | Operands\n");
+	printf("byte   | Opcode          | Operands\n");
 	printf("------------------------------\n");
 #endif
 

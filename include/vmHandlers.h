@@ -9,32 +9,74 @@ static void NOPHandler(VM* vm) { }
 
 static void HLTHandler(VM* vm) { }
 
-static void JMP_CHandler(VM* vm)
-{
-	for (uint8_t skipNum = CONST(); skipNum > 0; --skipNum)
-		vm->ip += opcodeLengthTable[*vm->ip];
-}
-
-static void JMP_RHandler(VM* vm)
-{
-	for (uint8_t skipNum = REG(); skipNum > 0; --skipNum)
-		vm->ip += opcodeLengthTable[*vm->ip];
-}
-
-static void JMP_MHandler(VM* vm)
-{
-	for (uint8_t skipNum = MEM(); skipNum > 0; --skipNum)
-		vm->ip += opcodeLengthTable[*vm->ip];
-}
-
-static void JMP_PHandler(VM* vm)
-{
-	for (uint8_t skipNum = PTR(); skipNum > 0; --skipNum)
-		vm->ip += opcodeLengthTable[*vm->ip];
-}
-
 static void JMP_LHandler(VM* vm)
 {
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void JMPZ_RLHandler(VM* vm)
+{
+	if (REG() != 0)
+	{
+		vm->ip += 2;
+		return;
+	}
+
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void JMPZ_MLHandler(VM* vm)
+{
+	if (MEM() != 0)
+	{
+		vm->ip += 2;
+		return;
+	}
+
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void JMPZ_PLHandler(VM* vm)
+{
+	if (PTR() != 0)
+	{
+		vm->ip += 2;
+		return;
+	}
+
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void JMPNZ_RLHandler(VM* vm)
+{
+	if (REG() == 0)
+	{
+		vm->ip += 2;
+		return;
+	}
+
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void JMPNZ_MLHandler(VM* vm)
+{
+	if (MEM() == 0)
+	{
+		vm->ip += 2;
+		return;
+	}
+
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void JMPNZ_PLHandler(VM* vm)
+{
+	if (PTR() == 0)
+	{
+		vm->ip += 2;
+		return;
+	}
+
 	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
 }
 
