@@ -48,14 +48,14 @@ Inline comments may also be formed by surrounding commented text in semicolons (
 
 Allowed:
 ```
-ld ;pos; %0 ;newPos; *1
+mv ;pos; %0 ;newPos; *1
 ```
 Not allowed:
 ```
 inc %0 ; Increment
-register zero. ; ld $0 %0
+register zero. ; mv $0 %0
 ```
-`register zero. ` will be read as code and `ld $0 %0` will be read as a comment.
+`register zero. ` will be read as code and `mv $0 %0` will be read as a comment.
 
 ### Constants
 Constants are written as just plain numbers, with no special operator denoting them. they are parsed as decimal numbers
@@ -95,6 +95,6 @@ out $0 ; Output the value currently stored in RAM location 0.
 To access the RAM location whose index is given by the value in a register (in other words, to dereference a pointer to
 RAM), use the register dereference operator (`*`).
 ```
-ld %0 3 ; Load register 0 with the value 3.
+mv %0 3 ; Load register 0 with the value 3.
 out *0 ; Output the value in RAM pointed to by register 0 (the value in RAM location 3).
 ```

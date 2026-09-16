@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "Compiler.h"
 #include "VM.h"
@@ -11,7 +10,7 @@ static void repl()
 	printf(" _  __   _   _     \n");
 	printf("| |/ /  /_\\ | |   \n");
 	printf("| ' <  / _ \\| |__  KAL Assembly Language\n");
-	printf("|_|\\_\\/_/ \\_\\____| v0.1.0\n");
+	printf("|_|\\_\\/_/ \\_\\____|\n");
 	printf("\nPress return without typing anything to exit.\n\n");
 
 	char line[1024];
