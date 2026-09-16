@@ -16,7 +16,7 @@ This multiplies the value stored in register 0 by 2 and stores the result in reg
 
 And here is an example program that stores a constant in a register, multiplies it by 4, then outputs the result.
 ```
-ld %0 3 ; Store the value of 3 in register 0.
+mv %0 3 ; Store the value of 3 in register 0.
 mul %0 4 ; Multiply the value in register 0 by 4.
 out %0 ; Output the value of register 0.
 ```
@@ -24,9 +24,9 @@ out %0 ; Output the value of register 0.
 KAL is case-insensitive.
 
 ### Labels
-A label is a location in the code with an identifier so that it can be referred to later in order to jump to it.
+A label is a location in the code that has an identifier so that it can be referred to later in order to jump to it.
 A label is declared by writing its identifier followed by the label declaration operator (`:`). To use a label as an
-operand to an instruction,  such as a jump instruction, you must prepend the label identifier with the label operand
+operand to an instruction, such as a jump instruction, you must prepend the label identifier with the label operand
 operator (`.`).
 ```
 start:

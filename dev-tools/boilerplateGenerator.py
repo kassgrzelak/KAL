@@ -41,7 +41,7 @@ class Instruction:
         self.template = template
         self.generate_variants = generate_variants
 
-def C_op_template(op: str) -> str:
+def c_op_template(op: str) -> str:
     return f"""uint8_t* mem = &$1;
     *mem {op}= $2;"""
 
@@ -52,12 +52,12 @@ def C_op_template(op: str) -> str:
 # A repetitive enough instruction is defined by its name, its signatures (as given in instruction-set.md), and a
 # template that defines how it will be executed.
 
-# The template is copy-pasted for each generated opcode, but with $1, $2, and so on being replaces with the first,
+# The template is copy-pasted for each generated opcode, but with $1, $2, and so on being replaced with the first,
 # second, and so on operands to that instruction.
 
 # All signatures of an instruction must have the same operand count.
 
-mv = Instruction("MV", ["mc", "mm"], C_op_template(""))
+mv = Instruction("MV", ["mc", "mm"], c_op_template(""))
 
 out_template = """printf("%d\\n", $1);"""
 out = Instruction("OUT", ["c", "m"], out_template)
@@ -68,14 +68,14 @@ inc = Instruction("INC", ["m"], inc_template)
 dec_template = """--$1;"""
 dec = Instruction("DEC", ["m"], dec_template)
 
-add = Instruction("ADD", ["mc", "mm"], C_op_template("+"))
-sub = Instruction("SUB", ["mc", "mm"], C_op_template("-"))
-mul = Instruction("MUL", ["mc", "mm"], C_op_template("*"))
-div = Instruction("DIV", ["mc", "mm"], C_op_template("/"))
+add = Instruction("ADD", ["mc", "mm"], c_op_template("+"))
+sub = Instruction("SUB", ["mc", "mm"], c_op_template("-"))
+mul = Instruction("MUL", ["mc", "mm"], c_op_template("*"))
+div = Instruction("DIV", ["mc", "mm"], c_op_template("/"))
 
-and_ = Instruction("AND", ["mc", "mm"], C_op_template("&"))
-or_ = Instruction("OR", ["mc", "mm"], C_op_template("|"))
-xor = Instruction("XOR", ["mc", "mm"], C_op_template("^"))
+and_ = Instruction("AND", ["mc", "mm"], c_op_template("&"))
+or_ = Instruction("OR", ["mc", "mm"], c_op_template("|"))
+xor = Instruction("XOR", ["mc", "mm"], c_op_template("^"))
 
 not_template = """uint8_t* mem = &$1;
     *mem = !$2;"""
@@ -85,7 +85,6 @@ jmp_template = """for (uint8_t skipNum = $1; skipNum > 0; --skipNum)
 	vm->ip += opcodeLengthTable[*vm->ip];"""
 jmp = Instruction("JMP", ["c", "m"], jmp_template, False)
 
-# FIXME: Constant conditional jump instructions causing segfaults.
 jmpz_template = """if ($1 != 0)
     {
         vm->ip += 2;

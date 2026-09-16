@@ -80,7 +80,7 @@ static void errorAt(Compiler* compiler, const Token* token, const char* message)
 
 static void noInstructionError(Compiler* compiler)
 {
-	errorAt(compiler, compiler->currentInstruction, "No instruction found matching this token. This is means "
+	errorAt(compiler, compiler->currentInstruction, "No instruction found matching this token. This means "
 		"the dev forgot to add an entry to instrTable. Not your fault!");
 }
 

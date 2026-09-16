@@ -12,6 +12,8 @@ typedef struct
 	Bytecode bytecode;
 	uint8_t* ip;
 
+
+
 	uint8_t registers[8];
 	uint8_t ram[256];
 

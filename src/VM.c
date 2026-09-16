@@ -21,7 +21,7 @@ void freeVM(const VM* vm)
 
 static void runtimeError(const VM* vm, const char* message)
 {
-	fprintf(stderr, "[byte 0x%04lx] Error: %s\n", vm->ip - vm->bytecode.code - 1, message);
+	fprintf(stderr, "[byte 0x%04llx] Error: %s\n", vm->ip - vm->bytecode.code - 1, message);
 }
 
 #define CONST() *vm->ip++

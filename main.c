@@ -6,9 +6,10 @@
 
 static void repl()
 {
+	// Kind of weird for an assembly language to have a REPL but it makes for quick testing.
 	printf(" _  __   _   _     \n");
 	printf("| |/ /  /_\\ | |   \n");
-	printf("| ' <  / _ \\| |__  K Assembly Language\n");
+	printf("| ' <  / _ \\| |__  KAL Assembly Language\n");
 	printf("|_|\\_\\/_/ \\_\\____| v0.1.0\n");
 	printf("\nPress return without typing anything to exit.\n\n");
 
@@ -35,6 +36,7 @@ static void repl()
 
 static char* readFile(const char* path)
 {
+	// Open file.
 	FILE* file = fopen(path, "rb");
 	if (file == NULL)
 	{
@@ -42,10 +44,12 @@ static char* readFile(const char* path)
 		exit(74);
 	}
 
+	// Get size of file.
 	fseek(file, 0, SEEK_END);
 	const size_t fileSize = ftell(file);
 	rewind(file);
 
+	// Allocate space to read file.
 	char* buffer = malloc(fileSize + 1);
 	if (buffer == NULL)
 	{
@@ -53,6 +57,7 @@ static char* readFile(const char* path)
 		exit(74);
 	}
 
+	// Read file.
 	const size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
 	if (bytesRead < fileSize)
 	{
@@ -61,6 +66,7 @@ static char* readFile(const char* path)
 	}
 	buffer[bytesRead] = '\0';
 
+	// Close and return.
 	fclose(file);
 	return buffer;
 }
@@ -74,6 +80,7 @@ static void runFile(const char* path)
 	interpret(&vm, source);
 
 	free(source);
+	freeVM(&vm);
 }
 
 int main(const int argc, const char* argv[])

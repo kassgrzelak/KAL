@@ -10,7 +10,7 @@
 #include "generated/generatedOpcodeLengths.h"
 
 // Steps to add a new instruction:
-// If the instructions is repetitive enough, you can add its template to dev-tools/boilerplateGenerator.py and have it
+// If the instruction is repetitive enough, you can add its template to dev-tools/boilerplateGenerator.py and have it
 // generate all the code for you, no other work needed.
 // Otherwise, you'll have to:
 // 1. Add the token to mnemonicTokens.h.
