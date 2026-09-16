@@ -42,6 +42,7 @@ uint16_t signatureFromModes(const AddressingMode* modes, const int count)
 typedef struct
 {
 	Bytecode* bytecode;
+	uint8_t* ram;
 	size_t* jumpTable;
 
 	const char* labelNames[256];
@@ -66,16 +67,16 @@ static void errorAt(Compiler* compiler, const Token* token, const char* message)
 	compiler->panicMode = true;
 	compiler->hadError = true;
 
-	fprintf(stderr, "[line %d] Error", token->line);
+	printf("[line %d] Error", token->line);
 
 	if (token->type == TOKEN_EOF)
-		fprintf(stderr, " at end");
+		printf(" at end");
 	else if (token->type == TOKEN_ERROR)
 	{ /* Nothing. */ }
 	else
-		fprintf(stderr, " at '%.*s'", token->length, token->start);
+		printf(" at '%.*s'", token->length, token->start);
 
-	fprintf(stderr, ": %s\n", message);
+	printf(": %s\n", message);
 }
 
 static void noInstructionError(Compiler* compiler)
@@ -92,16 +93,16 @@ static void noAddressingModeError(Compiler* compiler)
 
 static void warningAt(Compiler* compiler, const Token* token, const char* message)
 {
-	fprintf(stderr, "[line %d] Warning", token->line);
+	printf("[line %d] Warning", token->line);
 
 	if (token->type == TOKEN_EOF)
-		fprintf(stderr, " at end");
+		printf(" at end");
 	else if (token->type == TOKEN_ERROR)
 	{ /* Nothing. */ }
 	else
-		fprintf(stderr, " at '%.*s'", token->length, token->start);
+		printf(" at '%.*s'", token->length, token->start);
 
-	fprintf(stderr, ": %s\n", message);
+	printf(": %s\n", message);
 }
 
 static const Token* peek(const Compiler* compiler)
@@ -218,7 +219,7 @@ static uint8_t parseOperand(Compiler* compiler, const int index)
 #ifdef DEBUG_PRINT_BYTECODE
 static void printOpcode(const size_t byte, const uint8_t opcode)
 {
-	printf("0x%04lx | ", byte);
+	printf("0x%04llx | ", byte);
 
 	switch (opcode)
 	{
@@ -305,14 +306,73 @@ static void parseInstruction(Compiler* compiler)
 	}
 }
 
+static void dataFromDirective(Compiler* compiler)
+{
+	if (peek(compiler)->type != TOKEN_CONSTANT)
+		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
+
+	int ramIndex = parseNumberOperand(compiler, peek(compiler));
+	advance(compiler);
+
+	int elementNum = 0;
+
+	for (TokenType type = compiler->current[elementNum].type; type == TOKEN_CONSTANT;)
+		type = compiler->current[++elementNum].type;
+
+
+	if (ramIndex + elementNum - 1 > 255)
+		return errorAt(compiler, compiler->current, "Number of elements in #datafrom directive exceed the"
+			" space in RAM.");
+
+	while (peek(compiler)->type == TOKEN_CONSTANT)
+	{
+		const uint8_t value = parseNumberOperand(compiler, peek(compiler));
+		compiler->ram[ramIndex++] = value;
+		advance(compiler);
+	}
+}
+
+static void dataToDirective(Compiler* compiler)
+{
+	if (peek(compiler)->type != TOKEN_CONSTANT)
+		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
+
+	int ramIndex = parseNumberOperand(compiler, peek(compiler));
+	advance(compiler);
+
+	int elementNum = 0;
+
+	for (TokenType type = compiler->current[elementNum].type; type == TOKEN_CONSTANT;)
+		type = compiler->current[++elementNum].type;
+
+
+	if (ramIndex - elementNum + 1 < 0)
+		return errorAt(compiler, compiler->current, "Number of elements in #datato directive exceed the"
+			" space in RAM.");
+
+	ramIndex -= elementNum - 1;
+
+	while (peek(compiler)->type == TOKEN_CONSTANT)
+	{
+		const uint8_t value = parseNumberOperand(compiler, peek(compiler));
+		compiler->ram[ramIndex++] = value;
+		advance(compiler);
+	}
+}
+
 static void statement(Compiler* compiler)
 {
 	const Token* nextToken = peek(compiler);
 	advance(compiler);
 
 	if (!isStatementStarter(nextToken->type))
-		return errorAt(compiler, compiler->current, "Expected instruction mnemonic or label declaration at "
-			"beginning of statement.");
+		return errorAt(compiler, compiler->current - 1, "Expected instruction mnemonic or label "
+			"declaration at beginning of statement.");
+
+	if (nextToken->type == TOKEN_DATAFROM)
+		return dataFromDirective(compiler);
+	if (nextToken->type == TOKEN_DATATO)
+		return dataToDirective(compiler);
 
 	if (nextToken->type == TOKEN_LABEL_DECL)
 	{
@@ -338,7 +398,7 @@ static void printLabelDecls(const Compiler* compiler, const int labelsSeen)
 }
 #endif
 
-bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
+bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source)
 {
 	Scanner scanner;
 	initScanner(&scanner, source);
@@ -346,6 +406,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 
 	Compiler compiler;
 	compiler.bytecode = bytecode;
+	compiler.ram = ram;
 	compiler.jumpTable = jumpTable;
 	for (int i = 0; i < 256; ++i)
 		compiler.labelNames[i] = NULL;

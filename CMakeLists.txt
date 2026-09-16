@@ -19,6 +19,7 @@ add_executable(kal main.c
         include/opcodes.h
         include/mnemonicTokens.h
         include/vmHandlers.h
+        include/assemblerDirectives.hpp
 )
 
 target_include_directories(kal PRIVATE

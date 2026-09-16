@@ -8,8 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "memory.h"
+#include "assemblerDirectives.hpp"
 #include "instructions.h"
+#include "memory.h"
 
 static void initTokenArray(TokenArray* array)
 {
@@ -68,6 +69,9 @@ static void printToken(const TokenType type, const char* start, const int length
 	TYPE_CASE(TOKEN_##mnemonic);
 		MNEMONIC_TOKENS_X
 #undef X
+
+		TYPE_CASE(TOKEN_DATAFROM);
+		TYPE_CASE(TOKEN_DATATO);
 
 		TYPE_CASE(TOKEN_LABEL_DECL);
 
@@ -242,16 +246,41 @@ static Token mnemonic(Scanner* scanner)
 		return makeToken(scanner, instrTable[i].token);
 	}
 
-	return errorToken(scanner, "Unkown instruction mnemonic.");
+	return errorToken(scanner, "Unknown instruction mnemonic.");
 }
 
-static Token identifier(Scanner* scanner, const bool labelOperand)
+static Token assemblerDirective(Scanner* scanner)
+{
+	const size_t length = scanner->current - scanner->start;
+
+	for (int i = 0; i < ASSEMBLER_DIRECTIVE_COUNT; ++i)
+	{
+		const char* mnemonic = assemblerDirectives[i].mnemonic;
+
+		if (length != strlen(mnemonic))
+			skip:
+			continue;
+
+		for (size_t j = 0; j < length; ++j)
+			if (tolower(scanner->start[j]) != mnemonic[j])
+				goto skip;
+
+		return makeToken(scanner, assemblerDirectives[i].token);
+	}
+
+	return errorToken(scanner, "Unknown assembler directive.");
+}
+
+static Token identifier(Scanner* scanner, const bool labelOperand, const bool isAssemblerDirective)
 {
 	while (isAlpha(peek(scanner)) || isDigit(peek(scanner), DECIMAL))
 		advance(scanner);
 
 	if (labelOperand)
 		return makeToken(scanner, TOKEN_LABEL_OPERAND);
+
+	if (isAssemblerDirective)
+		return assemblerDirective(scanner);
 
 	if (peek(scanner) == ':')
 	{
@@ -335,7 +364,7 @@ static Token scanToken(Scanner* scanner)
 	const char c = peek(scanner);
 
 	if (isAlpha(c))
-		return identifier(scanner, false);
+		return identifier(scanner, false, false);
 	if (isDigit(c, DECIMAL))
 		return number(scanner, TOKEN_CONSTANT);
 	if (c == '%')
@@ -364,7 +393,17 @@ static Token scanToken(Scanner* scanner)
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected label name after label operator.");
 
-		return identifier(scanner, true);
+		return identifier(scanner, true, false);
+	}
+	if (c == '#')
+	{
+		advance(scanner);
+		scanner->start = scanner->current;
+
+		if (!isAlpha(peek(scanner)))
+			return errorToken(scanner, "Expected assembler directive after assembler directive operator.");
+
+		return identifier(scanner, false, true);
 	}
 
 	return errorToken(scanner, "Unexpected character.");

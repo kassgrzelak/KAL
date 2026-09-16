@@ -70,7 +70,7 @@ out 0xcf   ; Hexadecimal.
 
 ### Registers
 There are eight 8-bit registers in the virtual CPU used by KAL. The values in a register are referred to by the register
-operator (`%`) followed by the index of that register (0-7 inclusive). For example:
+operator (`%`) followed by the index of that register (0–7 inclusive). For example:
 ```
 out %0 ; Output the value currently stored in register 0.
 ```
@@ -98,3 +98,25 @@ RAM), use the register dereference operator (`*`).
 mv %0 3 ; Load register 0 with the value 3.
 out *0 ; Output the value in RAM pointed to by register 0 (the value in RAM location 3).
 ```
+
+### Assembler directives
+You can make use of the only two assembler directives currently in KAL to preload RAM with data. These come in two
+flavors: #datafrom and #datato.
+
+The #datafrom directive indicates that the following bytes should be present in a contiguous range in RAM from the
+address specified. For example:
+```
+#datafrom 0
+1 2 3 4
+```
+`#datafrom 0` specifies that the following numbers should start at RAM address 0. Therefore, RAM address 0 will contain
+the number 1, address 1 will contain the number 2, and so on.
+
+There is also the #datato directive, which works the same way except that the elements you give it are placed *up to and
+including* the given address. For example:
+```
+#datato 100
+1 2 3 4
+```
+The elements provided will be placed up to and including address 100. So, RAM address 100 will contain the number 4,
+address 99 will contain 3, and so on.

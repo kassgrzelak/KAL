@@ -15,6 +15,9 @@ typedef enum
 	MNEMONIC_TOKENS_X
 #undef X
 
+	// Assembler directives.
+	TOKEN_DATAFROM, TOKEN_DATATO,
+
 	// Label declaration.
 	TOKEN_LABEL_DECL,
 

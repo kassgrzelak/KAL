@@ -40,7 +40,7 @@ static char* readFile(const char* path)
 	FILE* file = fopen(path, "rb");
 	if (file == NULL)
 	{
-		fprintf(stderr, "Could not open file '%s'.\n", path);
+		printf("Could not open file '%s'.\n", path);
 		exit(74);
 	}
 
@@ -53,7 +53,7 @@ static char* readFile(const char* path)
 	char* buffer = malloc(fileSize + 1);
 	if (buffer == NULL)
 	{
-		fprintf(stderr, "Not enough memory to read '%s'.\n", path);
+		printf("Not enough memory to read '%s'.\n", path);
 		exit(74);
 	}
 
@@ -61,7 +61,7 @@ static char* readFile(const char* path)
 	const size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
 	if (bytesRead < fileSize)
 	{
-		fprintf(stderr, "Couldn't read file '%s'.\n", path);
+		printf("Couldn't read file '%s'.\n", path);
 		exit(74);
 	}
 	buffer[bytesRead] = '\0';
@@ -91,7 +91,7 @@ int main(const int argc, const char* argv[])
 		runFile(argv[1]);
 	else
 	{
-		fprintf(stderr, "Usage: kal [path]\n");
+		printf("Usage: kal [path]\n");
 		exit(64);
 	}
 

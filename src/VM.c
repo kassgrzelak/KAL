@@ -22,7 +22,7 @@ void freeVM(const VM* vm)
 
 static void runtimeError(const VM* vm, const char* message)
 {
-	fprintf(stderr, "[byte 0x%04llx] Error: %s\n", vm->ip - vm->bytecode.code - 1, message);
+	printf("[byte 0x%04llx] Error: %s\n", vm->ip - vm->bytecode.code - 1, message);
 }
 
 #define CONST() *vm->ip++
@@ -64,7 +64,7 @@ InterpretResult interpret(VM* vm, const char* source)
 {
 	initBytecode(&vm->bytecode);
 
-	if (!compile(&vm->bytecode, vm->jumpTable, source))
+	if (!compile(&vm->bytecode, vm->jumpTable, vm->ram, source))
 		return INTERPRET_COMPILE_ERROR;
 
 	vm->ip = vm->bytecode.code;

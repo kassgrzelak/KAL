@@ -23,6 +23,6 @@ typedef enum
 AddressingMode tokenTypeToAddressingMode(TokenType type);
 uint16_t signatureFromModes(const AddressingMode* modes, int count);
 
-bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source);
+bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source);
 
 #endif //KAL_COMPILER_H
