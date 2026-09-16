@@ -22,7 +22,12 @@ Move a value into a memory location.
 - `mv M1 M0` - Move the value at M0 into M1.
 
 ### out
-Output a value to stdout.
+Output a number to stdout.
+- `out C` - Output a constant.
+- `out M` - Output the value in a memory location.
+
+### outa
+Output an ASCII character to stdout.
 - `out C` - Output a constant.
 - `out M` - Output the value in a memory location.
 

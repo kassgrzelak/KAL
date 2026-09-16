@@ -19,7 +19,7 @@ static void repl()
 
 	for (;;)
 	{
-		printf("> ");
+		printf("\n> ");
 
 		// Exit if fgets fails or user presses enter without typing anything (only a newline in line).
 		if (!fgets(line, sizeof(line), stdin) || line[1] == '\0')

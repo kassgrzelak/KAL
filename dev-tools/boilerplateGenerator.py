@@ -62,6 +62,9 @@ mv = Instruction("MV", ["mc", "mm"], c_op_template(""))
 out_template = """printf("%d\\n", $1);"""
 out = Instruction("OUT", ["c", "m"], out_template)
 
+outa_template = """printf("%c", $1);"""
+outa = Instruction("OUTA", ["c", "m"], outa_template)
+
 inc_template = """++$1;"""
 inc = Instruction("INC", ["m"], inc_template)
 
@@ -105,7 +108,7 @@ jmpnz_template = """if ($1 == 0)
 		vm->ip += opcodeLengthTable[*vm->ip];"""
 jmpnz = Instruction("JMPNZ", ["mc", "mm"], jmpnz_template, False)
 
-instructions = [mv, out, inc, dec, add, sub, mul, div, and_, or_, xor, not_, jmp, jmpz, jmpnz]
+instructions = [mv, out, outa, inc, dec, add, sub, mul, div, and_, or_, xor, not_, jmp, jmpz, jmpnz]
 
 ###########################
 # Instruction Definitions #
