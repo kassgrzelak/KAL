@@ -266,6 +266,7 @@ static Token number(Scanner* scanner, const TokenType type)
 {
 	if (type == TOKEN_REGISTER && peek(scanner) >= 'a' && peek(scanner) <= 'h')
 	{
+		// Convert letters a-h to numbers 0-7.
 		const int registerNum = peek(scanner) - 'a';
 		advance(scanner);
 		const char* digit;
@@ -280,10 +281,8 @@ static Token number(Scanner* scanner, const TokenType type)
 		case 5: digit = "5"; break;
 		case 6: digit = "6"; break;
 		case 7: digit = "7"; break;
-		case 8: digit = "8"; break;
-		case 9: digit = "9"; break;
 
-		default: digit = "!"; break; // Unreachable.
+		default: digit = "!"; break; // Unreachable as we check for a <= letter <= h.
 		}
 
 #ifdef DEBUG_PRINT_TOKENS

@@ -247,7 +247,7 @@ static void checkOperandValue(Compiler* compiler, const uint8_t value, const Tok
 			errorAt(compiler, token, "Invalid register index.");
 	if (token->type == TOKEN_POINTER)
 		if (value >= 8)
-			errorAt(compiler, token, "Invalid poitner index.");
+			errorAt(compiler, token, "Invalid pointer index.");
 }
 
 static void parseInstruction(Compiler* compiler)
@@ -347,6 +347,8 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, const char* source)
 	Compiler compiler;
 	compiler.bytecode = bytecode;
 	compiler.jumpTable = jumpTable;
+	for (int i = 0; i < 256; ++i)
+		compiler.labelNames[i] = NULL;
 	compiler.panicMode = false;
 	compiler.hadError = false;
 	compiler.labelDeclsSeen = 0;

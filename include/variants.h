@@ -8,6 +8,10 @@ static const InstrVariant nopVariants[] = {{OP_NOP, 1, 0}};
 
 static const InstrVariant hltVariants[] = {{OP_HLT, 1, 0}};
 
+static const InstrVariant callVariants[] = {{OP_CALL_L, 2, 05}};
+
+static const InstrVariant retVariants[] = {{OP_RET, 1, 0}};
+
 static const InstrVariant jmpVariants[] = {
 	{OP_JMP_C, 2, 01},
 	{OP_JMP_R, 2, 02},

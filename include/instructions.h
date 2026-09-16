@@ -54,12 +54,16 @@ typedef struct
 static const InstrDef instrTable[] = {
 	TABLE_ENTRY(NOP, nop, 0)
 	TABLE_ENTRY(HLT, hlt, 0)
+	TABLE_ENTRY(CALL, call, 1)
+	TABLE_ENTRY(RET, ret, 0)
 	GENERATED_TABLE_ENTRIES
 };
 
 static const uint8_t opcodeLengthTable[] = {
 	[OP_NOP] = 1,
 	[OP_HLT] = 1,
+	[OP_CALL_L] = 2,
+	[OP_RET] = 1,
 	[OP_JMP_L] = 2,
 	[OP_JMPZ_RL] = 3,
 	[OP_JMPZ_ML] = 3,

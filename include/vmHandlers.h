@@ -9,6 +9,29 @@ static void NOPHandler(VM* vm) { }
 
 static void HLTHandler(VM* vm) { }
 
+static void CALL_LHandler(VM* vm)
+{
+	if (vm->callDepth >= 8)
+	{
+		runtimeError(vm, "Exceeded max call depth of 8.");
+		return;
+	}
+
+	vm->callStack[vm->callDepth++] = vm->ip + 1;
+	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];
+}
+
+static void RETHandler(VM* vm)
+{
+	if (vm->callDepth == 0)
+	{
+		runtimeError(vm, "No call to return from.");
+		return;
+	}
+
+	vm->ip = vm->callStack[--vm->callDepth];
+}
+
 static void JMP_LHandler(VM* vm)
 {
 	vm->ip = &vm->bytecode.code[vm->jumpTable[CONST()]];

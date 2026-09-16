@@ -12,6 +12,7 @@
 void initVM(VM* vm)
 {
 	initBytecode(&vm->bytecode);
+	vm->callDepth = 0;
 }
 
 void freeVM(const VM* vm)
@@ -52,6 +53,9 @@ static InterpretResult run(VM* vm)
 
 		vmHandlerTable[opcode](vm);
 	}
+
+	// Reset call depth after each run in case it didn't end on 0.
+	vm->callDepth = 0;
 
 	return INTERPRET_OK;
 }

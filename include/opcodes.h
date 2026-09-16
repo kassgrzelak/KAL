@@ -10,6 +10,8 @@
 #define OPCODES_X \
 	X(NOP) \
 	X(HLT) \
+	X(CALL_L) \
+	X(RET) \
 	X(JMP_L) \
 	X(JMPZ_RL) \
 	X(JMPZ_ML) \
