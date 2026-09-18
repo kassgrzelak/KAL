@@ -86,26 +86,22 @@ Perform bitwise NOT on a value in a memory location.
 ## Jumps
 ### jmp
 Unconditional jump.
-- `jmp C` - Jump a constant number of instructions forwards or backwards. Note that C will be treated as a signed 
-number in two's complement.
-- `jmp M` - Jump a number of instructions forwards or backwards dictated by the value in M. Note that the value in M 
-will be treated as a signed number in two's complement.
+- `jmp C` - Jump a constant number of instructions forwards or backwards.
+- `jmp M` - Jump a number of instructions forwards or backwards dictated by the value in M.
 - `jmp L` - Jump to label L.
 
 ### jmpz
 Conditional jump if zero.
-- `jmpz M C` - Jump a constant number of instructions forwards or backwards only if the value in M is zero. Note that C 
-will be treated as a signed number in two's complement.
+- `jmpz M C` - Jump a constant number of instructions forwards or backwards only if the value in M is zero.
 - `jmpz M1 M0` - Jump a number of instructions forwards or backwards dictated by the value in M0 only if the value in M1
-is zero. Note that the value in M0 will be treated as a signed number in two's complement.
+is zero.
 - `jmpz M L` - Jump to label L only if the value in M is zero.
 
 ### jmpnz
 Conditional jump if not zero.
-- `jmpnz M C` - Jump a constant number of instructions forwards or backwards only if the value in M is not zero. Note 
-that C will be treated as a signed number in two's complement.
+- `jmpnz M C` - Jump a constant number of instructions forwards or backwards only if the value in M is not zero.
 - `jmpnz M1 M0` - Jump a number of instructions forwards or backwards dictated by the value in M0 only if the value in 
-M1 is not zero. Note that the value in M0 will be treated as a signed number in two's complement.
+M1 is not zero.
 - `jmpnz M L` - Jump to label L only if the value in M is not zero.
 
 ## Function calls
