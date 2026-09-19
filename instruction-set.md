@@ -86,22 +86,20 @@ Perform bitwise NOT on a value in a memory location.
 ## Jumps
 ### jmp
 Unconditional jump.
-- `jmp C` - Jump a constant number of instructions forwards or backwards.
-- `jmp M` - Jump a number of instructions forwards or backwards dictated by the value in M.
+- `jmp C` - Jump a constant number of instructions forwards.
+- `jmp M` - Jump M instructions forwards.
 - `jmp L` - Jump to label L.
 
 ### jmpz
 Conditional jump if zero.
-- `jmpz M C` - Jump a constant number of instructions forwards or backwards only if the value in M is zero.
-- `jmpz M1 M0` - Jump a number of instructions forwards or backwards dictated by the value in M0 only if the value in M1
-is zero.
+- `jmpz M C` - Jump a constant number of instructions forwards only if the value in M is zero.
+- `jmpz M1 M0` - Jump M0 instructions forwards only if the value in M1 is zero.
 - `jmpz M L` - Jump to label L only if the value in M is zero.
 
 ### jmpnz
 Conditional jump if not zero.
-- `jmpnz M C` - Jump a constant number of instructions forwards or backwards only if the value in M is not zero.
-- `jmpnz M1 M0` - Jump a number of instructions forwards or backwards dictated by the value in M0 only if the value in 
-M1 is not zero.
+- `jmpnz M C` - Jump a constant number of instructions forwards only if the value in M is not zero.
+- `jmpnz M1 M0` - Jump M0 instructions forwards only if the value in M1 is not zero.
 - `jmpnz M L` - Jump to label L only if the value in M is not zero.
 
 ## Function calls
