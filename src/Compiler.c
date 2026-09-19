@@ -48,6 +48,9 @@ typedef struct
 	const char* labelNames[256];
 	int labelLengths[256];
 
+	const char* memNames[256];
+	int memNameLengths[256];
+
 	bool panicMode;
 	bool hadError;
 
@@ -177,6 +180,10 @@ static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
 
 static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
 {
+	if (!isdigit(token->start[0]))
+		warningAt(compiler, token, "Attempted to parse non-number token in parseNumberOperand(). This is a "
+			"compiler bug, not your fault.");
+
 	if (token->length >= 2 && token->start[0] == '0')
 	{
 		if (tolower(token->start[1]) == 'b')
@@ -206,17 +213,85 @@ static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
 	return number;
 }
 
+static uint8_t parseConstant(Compiler* compiler, const Token* token)
+{
+	if (isDigit(token->start[0], BASE_DECIMAL))
+		return parseNumberOperand(compiler, token);
+
+	for (int i = 0; i < 256; ++i)
+	{
+		if (compiler->memNames[i] == NULL)
+			continue;
+		if (compiler->memNameLengths[i] != token->length)
+			continue;
+
+		bool notEqual = false;
+
+		for (int charIndex = 0; charIndex < token->length; ++charIndex)
+			if (tolower(compiler->memNames[i][charIndex]) != tolower(token->start[charIndex]))
+			{
+				notEqual = true;
+				break;
+			}
+
+		if (notEqual)
+			continue;
+
+		return i;
+	}
+
+	errorAt(compiler, token, "Named RAM location name does not match any name given in any #namedmem directive"
+		" in the program.");
+	return 0;
+}
+
+static uint8_t parseMemoryOperand(Compiler* compiler, const Token* token)
+{
+	if (isDigit(token->start[0], BASE_DECIMAL))
+		return parseNumberOperand(compiler, token);
+
+	for (int i = 0; i < 256; ++i)
+	{
+		if (compiler->memNames[i] == NULL)
+			continue;
+		if (compiler->memNameLengths[i] != token->length)
+			continue;
+
+		bool notEqual = false;
+
+		for (int charIndex = 0; charIndex < token->length; ++charIndex)
+			if (tolower(compiler->memNames[i][charIndex]) != tolower(token->start[charIndex]))
+			{
+				notEqual = true;
+				break;
+			}
+
+		if (notEqual)
+			continue;
+
+		return i;
+	}
+
+	errorAt(compiler, token, "Named RAM location name does not match any name given in any #namedmem directive"
+		" in the program.");
+	return 0;
+}
+
 static uint8_t parseOperand(Compiler* compiler, const int index)
 {
 	const Token* token = compiler->operands[index];
 
 	if (token->type == TOKEN_LABEL_OPERAND)
 		return parseLabelOperand(compiler, token);
+	if (token->type == TOKEN_MEMORY)
+		return parseMemoryOperand(compiler, token);
+	if (token->type == TOKEN_CONSTANT)
+		return parseConstant(compiler, token);
 
 	return parseNumberOperand(compiler, token);
 }
 
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 static void printOpcode(const size_t byte, const uint8_t opcode)
 {
 	printf("0x%04llx | ", byte);
@@ -234,7 +309,7 @@ static void printOpcode(const size_t byte, const uint8_t opcode)
 }
 #endif
 
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 static void printOperand(const uint8_t operand)
 {
 	printf("       |                 | %d\n", operand);
@@ -286,7 +361,7 @@ static void parseInstruction(Compiler* compiler)
 	if (!variant)
 		return noAddressingModeError(compiler);
 
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 	printOpcode(compiler->bytecode->count, variant->opcode);
 #endif
 
@@ -298,7 +373,7 @@ static void parseInstruction(Compiler* compiler)
 
 		checkOperandValue(compiler, operand, compiler->operands[i]);
 
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 		printOperand(operand);
 #endif
 
@@ -308,10 +383,10 @@ static void parseInstruction(Compiler* compiler)
 
 static void dataFromDirective(Compiler* compiler)
 {
-	if (peek(compiler)->type != TOKEN_CONSTANT)
+	if (peek(compiler)->type != TOKEN_MEMORY)
 		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
 
-	int ramIndex = parseNumberOperand(compiler, peek(compiler));
+	int ramIndex = parseMemoryOperand(compiler, peek(compiler));
 	advance(compiler);
 
 	int elementNum = 0;
@@ -326,7 +401,7 @@ static void dataFromDirective(Compiler* compiler)
 
 	while (peek(compiler)->type == TOKEN_CONSTANT)
 	{
-		const uint8_t value = parseNumberOperand(compiler, peek(compiler));
+		const uint8_t value = parseConstant(compiler, peek(compiler));
 		compiler->ram[ramIndex++] = value;
 		advance(compiler);
 	}
@@ -334,10 +409,10 @@ static void dataFromDirective(Compiler* compiler)
 
 static void dataToDirective(Compiler* compiler)
 {
-	if (peek(compiler)->type != TOKEN_CONSTANT)
+	if (peek(compiler)->type != TOKEN_MEMORY)
 		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
 
-	int ramIndex = parseNumberOperand(compiler, peek(compiler));
+	int ramIndex = parseMemoryOperand(compiler, peek(compiler));
 	advance(compiler);
 
 	int elementNum = 0;
@@ -354,10 +429,18 @@ static void dataToDirective(Compiler* compiler)
 
 	while (peek(compiler)->type == TOKEN_CONSTANT)
 	{
-		const uint8_t value = parseNumberOperand(compiler, peek(compiler));
+		const uint8_t value = parseConstant(compiler, peek(compiler));
 		compiler->ram[ramIndex++] = value;
 		advance(compiler);
 	}
+}
+
+static void namedMemDirective(Compiler* compiler)
+{
+	if (peek(compiler)->type != TOKEN_MEMORY)
+		return errorAt(compiler, compiler->current, "Expected memory location name after #namedmem directive.");
+
+
 }
 
 static void statement(Compiler* compiler)
@@ -373,6 +456,8 @@ static void statement(Compiler* compiler)
 		return dataFromDirective(compiler);
 	if (nextToken->type == TOKEN_DATATO)
 		return dataToDirective(compiler);
+	if (nextToken->type == TOKEN_NAMEDMEM)
+		return namedMemDirective(compiler);
 
 	if (nextToken->type == TOKEN_LABEL_DECL)
 	{
@@ -386,7 +471,7 @@ static void statement(Compiler* compiler)
 	parseInstruction(compiler);
 }
 
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 static void printLabelDecls(const Compiler* compiler, const int labelsSeen)
 {
 	printf("\n=== LABEL DECLARATIONS ===\n");
@@ -395,6 +480,23 @@ static void printLabelDecls(const Compiler* compiler, const int labelsSeen)
 
 	for (int i = 0; i < labelsSeen; ++i)
 		printf("%03d   | '%.*s'\n", i, compiler->labelLengths[i], compiler->labelNames[i]);
+}
+#endif
+
+#ifdef DEBUG_PRINT
+static void printMemNames(const Compiler* compiler)
+{
+	printf("\n=== NAMED RAM ADDRESSES ===\n");
+	printf("Address | Address name\n");
+	printf("-----------------------\n");
+
+	for (int i = 0; i < 256; ++i)
+	{
+		if (compiler->memNames[i] == NULL)
+			continue;
+
+		printf("0x%02x    | '%.*s'\n", i, compiler->memNameLengths[i], compiler->memNames[i]);
+	}
 }
 #endif
 
@@ -410,6 +512,8 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	compiler.jumpTable = jumpTable;
 	for (int i = 0; i < 256; ++i)
 		compiler.labelNames[i] = NULL;
+	for (int i = 0; i < 256; ++i)
+		compiler.memNames[i] = NULL;
 	compiler.panicMode = false;
 	compiler.hadError = false;
 	compiler.labelDeclsSeen = 0;
@@ -417,6 +521,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	compiler.operandCount = 0;
 	compiler.current = scanner.tokenArray.tokens;
 
+	// Label declaration pass.
 	int labelsSeen = 0;
 
 	for (size_t i = 0; i < scanner.tokenArray.count; ++i)
@@ -427,7 +532,8 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 			continue;
 		if (labelsSeen == 256)
 		{
-			errorAt(&compiler, &token, "Exceeded the limit of 256 labels in a single program.");
+			errorAt(&compiler, &token, "Exceeded the limit of 256 labels in a single program. Compilation "
+				"aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
@@ -436,12 +542,76 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 		compiler.labelLengths[labelsSeen++] = token.length;
 	}
 
-#ifdef DEBUG_PRINT_BYTECODE
+	bool namedMemSeen = false;
+
+	// Named RAM locations pass.
+	for (size_t i = 0; i < scanner.tokenArray.count; ++i)
+	{
+		Token* directiveToken = &scanner.tokenArray.tokens[i];
+
+		if (directiveToken->type != TOKEN_NAMEDMEM)
+			continue;
+
+		namedMemSeen = true;
+
+		if (scanner.tokenArray.count - 1 - i < 2)
+		{
+			errorAt(&compiler, directiveToken, "Expected memory index and name after #namedmem directive. "
+				"Compilation aborted.");
+			freeScanner(&scanner);
+			return false;
+		}
+		if (directiveToken[1].type != TOKEN_MEMORY)
+		{
+			errorAt(&compiler, &directiveToken[1], "Expected memory name and index after #namedmem directive. "
+				"Compilation aborted.");
+			freeScanner(&scanner);
+			return false;
+		}
+		if (!isAlpha(directiveToken[1].start[0]))
+		{
+			errorAt(&compiler, &directiveToken[1], "Expected memory name in #namedmem directive to be an "
+				"identifier. Compilation aborted.");
+			freeScanner(&scanner);
+			return false;
+		}
+		if (directiveToken[2].type != TOKEN_MEMORY)
+		{
+			errorAt(&compiler, &directiveToken[2], "Expected memory name and index after #namedmem directive. "
+				"Compilation aborted.");
+			freeScanner(&scanner);
+			return false;
+		}
+		if (!isDigit(directiveToken[2].start[0], BASE_DECIMAL))
+		{
+			errorAt(&compiler, &directiveToken[2], "Expected memory index in #namedmem directive to be a "
+				"number. Compilation aborted.");
+			freeScanner(&scanner);
+			return false;
+		}
+
+		const uint8_t memIndex = parseNumberOperand(&compiler, &directiveToken[2]);
+
+		if (compiler.memNames[memIndex] != NULL)
+			warningAt(&compiler, directiveToken, "Renaming ");
+
+		compiler.memNames[memIndex] = directiveToken[1].start;
+		compiler.memNameLengths[memIndex] = directiveToken[1].length;
+
+		const Token skipToken = {NULL, TOKEN_SKIP, 0, 0};
+		directiveToken[0] = skipToken;
+		directiveToken[1] = skipToken;
+		directiveToken[2] = skipToken;
+	}
+
+#ifdef DEBUG_PRINT
 	if (labelsSeen > 0)
 		printLabelDecls(&compiler, labelsSeen);
+	if (namedMemSeen)
+		printMemNames(&compiler);
 #endif
 
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 	printf("\n=== BYTECODE ===\n");
 	printf("byte   | Opcode          | Operands\n");
 	printf("------------------------------\n");
@@ -452,6 +622,12 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 
 	while (peek(&compiler)->type != TOKEN_EOF)
 	{
+		if (peek(&compiler)->type == TOKEN_SKIP)
+		{
+			advance(&compiler);
+			continue;
+		}
+
 		statement(&compiler);
 
 		if (compiler.panicMode)
@@ -459,7 +635,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	}
 
 	// Add hlt instruction in case a label was placed at the end of a program with no instructions after.
-#ifdef DEBUG_PRINT_BYTECODE
+#ifdef DEBUG_PRINT
 	printOpcode(compiler.bytecode->count, OP_HLT);
 #endif
 	emitByte(&compiler, OP_HLT);

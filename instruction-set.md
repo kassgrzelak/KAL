@@ -62,7 +62,7 @@ Divide a value in a memory location with truncation.
 - `div M1 M0` - Divide the value in M1 by the value in M0 and store the result in
   M1.
 
-## Bitwise logic
+## Bitwise Logic
 ### and
 Perform bitwise AND on a value in a memory location.
 - `and M C` - Perform bitwise AND with the value in M and C and store the result in M.

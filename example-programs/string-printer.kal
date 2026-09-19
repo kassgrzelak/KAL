@@ -1,0 +1,13 @@
+#namedmem $ascii_string $100
+#datafrom $ascii_string
+72 69 76 76 79 0
+
+mv %0 &ascii_string
+loop_start:
+    mv %1 *0
+    jmpz %1 .end
+    outa %1
+    inc %0
+    jmp .loop_start
+end:
+    hlt

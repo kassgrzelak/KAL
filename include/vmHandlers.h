@@ -41,7 +41,7 @@ static void JMPZ_RLHandler(VM* vm)
 {
 	if (REG() != 0)
 	{
-		vm->ip += 2;
+		vm->ip += 1;
 		return;
 	}
 
@@ -52,7 +52,7 @@ static void JMPZ_MLHandler(VM* vm)
 {
 	if (MEM() != 0)
 	{
-		vm->ip += 2;
+		vm->ip += 1;
 		return;
 	}
 
@@ -63,7 +63,7 @@ static void JMPZ_PLHandler(VM* vm)
 {
 	if (PTR() != 0)
 	{
-		vm->ip += 2;
+		vm->ip += 1;
 		return;
 	}
 
@@ -74,7 +74,7 @@ static void JMPNZ_RLHandler(VM* vm)
 {
 	if (REG() == 0)
 	{
-		vm->ip += 2;
+		vm->ip += 1;
 		return;
 	}
 
@@ -85,7 +85,7 @@ static void JMPNZ_MLHandler(VM* vm)
 {
 	if (MEM() == 0)
 	{
-		vm->ip += 2;
+		vm->ip += 1;
 		return;
 	}
 
@@ -96,7 +96,7 @@ static void JMPNZ_PLHandler(VM* vm)
 {
 	if (PTR() == 0)
 	{
-		vm->ip += 2;
+		vm->ip += 1;
 		return;
 	}
 

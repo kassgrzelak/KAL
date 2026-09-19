@@ -1,6 +1,6 @@
 # KAL Docs
 
-### Syntax
+## Syntax
 A KAL Program consists of a series of statements, which are either labels or instructions. 
 The convention is to have one statement per line, but KAL allows multiple.
 
@@ -21,20 +21,8 @@ mul %0 4 ; Multiply the value in register 0 by 4.
 out %0 ; Output the value of register 0.
 ```
 
-KAL is case-insensitive.
-
-### Labels
-A label is a location in the code that has an identifier so that it can be referred to later in order to jump to it.
-A label is declared by writing its identifier followed by the label declaration operator (`:`). To use a label as an
-operand to an instruction, such as a jump instruction, you must prepend the label identifier with the label operand
-operator (`.`).
-```
-start:
-  out 0
-jmp .start ; Output 0 infinitely.
-```
-
-Label identifiers must be exclusively alphanumeric, and you may not have more than 256 of them in a program.
+KAL is completely case-insensitive, so you may write instruction mnemonics (or indeed any text) in all-lowercase (as in
+these docs), in all-uppercase, or any other capitalization style you like.
 
 ### Comments
 Comments are denoted with semicolons (`;`) and go until the end of the line. A comment may make up the entirety of a
@@ -57,9 +45,11 @@ register zero. ; mv $0 %0
 ```
 `register zero. ` will be read as code and `mv $0 %0` will be read as a comment.
 
+## Numbers
+
 ### Constants
-Constants are written as just plain numbers, with no special operator denoting them. they are parsed as decimal numbers
-by default, but binary literals can be written by adding the prefix `0b`, octal by `0`, and hexadecimal by `0x` (All 
+Constants are written as just plain numbers, with no special operator denoting them. They are parsed as decimal numbers
+by default, but binary literals can be written by adding the prefix `0b`, octal by `0`, and hexadecimal by `0x` (All
 case-insensitive). Letters A through F in hexadecimal number literals are also case-insensitive.
 ```
 out 0b1001 ; Binary.
@@ -75,14 +65,13 @@ operator (`%`) followed by the index of that register (0–7 inclusive). For exa
 out %0 ; Output the value currently stored in register 0.
 ```
 
-If you wish, you can also refer to the registers alphabetically. That is, `%a` refers to register 0, `%b` to 1, up to 
+If you wish, you can also refer to the registers alphabetically. That is, `%a` refers to register 0, `%b` to 1, up to
 `%h` for 7.
 ```
 out %a ; Also output the value in register 0.
 ```
 Note that `%a` is different from `%0xa`. The first refers to register zero and the second to (the non-existent)
 register ten.
-
 
 ### RAM
 The 8-bit registers allow for the addressing of 256 bytes of RAM. Just like registers, you can access RAM using an index
@@ -99,24 +88,103 @@ mv %0 3 ; Load register 0 with the value 3.
 out *0 ; Output the value in RAM pointed to by register 0 (the value in RAM location 3).
 ```
 
-### Assembler directives
-You can make use of the only two assembler directives currently in KAL to preload RAM with data. These come in two
-flavors: #datafrom and #datato.
+### Labels
+A label names a location in the code so that it can be jumped to later by name.
 
-The #datafrom directive indicates that the following bytes should be present in a contiguous range in RAM from the
-address specified. For example:
+A label is declared by writing its identifier followed by the label declaration operator (`:`). To use a label as an
+operand to an instruction, such as a jump instruction, you must prepend the label identifier with the label operand
+operator (`.`).
 ```
-#datafrom 0
+start:
+  out 0
+jmp .start ; Output 0 infinitely.
+```
+
+Label identifiers must be exclusively alphanumeric, and you may not have more than 256 of them in a program.
+
+## Assembler Directives
+Assembler directives are indicated by a hashtag (`#`) and do not translate to any instructions in the compiled code,
+but rather perform other tasks.
+
+### #datafrom and #datato
+These directives both preload ram with an array of data, but in slightly different ways.
+
+The #datafrom directive indicates that the following bytes should be present in a contiguous range in RAM starting from
+the address specified. For example:
+```
+#datafrom $10
 1 2 3 4
 ```
-`#datafrom 0` specifies that the following numbers should start at RAM address 0. Therefore, RAM address 0 will contain
-the number 1, address 1 will contain the number 2, and so on.
+RAM address 10 will contain the number 1, address 11 will contain the number 2, and so on.
+
+```
+RAM Address:   | 10 | 11 | 12 | 13 |
+Stored Number: |  1 |  2 |  3 |  4 |
+```
 
 There is also the #datato directive, which works the same way except that the elements you give it are placed *up to and
 including* the given address. For example:
 ```
-#datato 100
+#datato $255
 1 2 3 4
 ```
-The elements provided will be placed up to and including address 100. So, RAM address 100 will contain the number 4,
-address 99 will contain 3, and so on.
+So, RAM address 255 will contain the number 4, address 254 will contain 3, and so on.
+
+```
+RAM Address:   | 252 | 253 | 254 | 255 |
+Stored Number: |   1 |   2 |   3 |   4 |
+```
+
+### #namedmem 
+You can use the #namedmem directive to name any RAM address with a memorable string identifier, which can then be used
+anywhere a RAM address is expected. Here is an example:
+
+```
+#namedmem $my_number $0
+
+mv $my_number 10
+out $my_number
+```
+
+This program creates an alias for RAM address 0 called `my_number`, uses it to move the value of 10 into it, then
+prints it to the screen. Note that you still must prepend the name with the RAM operator (`$`).
+
+Because the #namedmem directive is dealt with in a separate pass before any instruction statements are compiled, a named
+RAM location doesn't even have to be named before it's used in the program, making this a completely valid KAL program:
+
+```
+mv $my_number 10
+out $my_number
+
+#namedmem $my_number $0
+```
+
+You can combine this directive with #datafrom directive to create named arrays in your code.
+
+```
+#namedmem $ascii_string $100
+#datafrom $100
+72 69 76 76 79 0
+```
+
+#### Named RAM Address Operator
+However, it would be nice to be able to recover the actual address the name is aliased to while still using that handy
+identifier. This is what the named RAM address operator (`&`) is for.
+
+When followed by a named RAM address identifier, it evaluates to the numerical address that identifier is aliased to.
+
+```
+#namedmem $named_location $10
+mv %0 &named_location ; Register 0 will now contain the number 10.
+```
+
+Note how the second line is different to:
+
+```
+mv %0 $named_location
+```
+
+As this instruction would move whatever value is in RAM address 10 into register 0.
+
+Note that the result of this operator is a constant value and will be treated as such in the operands to any instruction
+or assembler directive.

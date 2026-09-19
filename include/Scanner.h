@@ -16,7 +16,7 @@ typedef enum
 #undef X
 
 	// Assembler directives.
-	TOKEN_DATAFROM, TOKEN_DATATO,
+	TOKEN_DATAFROM, TOKEN_DATATO, TOKEN_NAMEDMEM,
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,
@@ -25,11 +25,19 @@ typedef enum
 	TOKEN_CONSTANT, TOKEN_REGISTER, TOKEN_MEMORY, TOKEN_POINTER, TOKEN_LABEL_OPERAND,
 
 	// Special.
-	TOKEN_EOF, TOKEN_ERROR
+	TOKEN_EOF, TOKEN_ERROR, TOKEN_SKIP
 } TokenType;
 
 bool isStatementStarter(TokenType type);
 bool isOperand(TokenType type);
+
+typedef enum
+{
+	BASE_BINARY, BASE_OCTAL, BASE_DECIMAL, BASE_HEXADECIMAL
+} NumBase;
+
+bool isAlpha(char c);
+bool isDigit(char c, NumBase base);
 
 typedef struct
 {

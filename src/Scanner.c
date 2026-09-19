@@ -53,7 +53,7 @@ void freeScanner(const Scanner* scanner)
 	freeTokenArray(&scanner->tokenArray);
 }
 
-#ifdef DEBUG_PRINT_TOKENS
+#ifdef DEBUG_PRINT
 static void printToken(const TokenType type, const char* start, const int length, const int line)
 {
 	printf("%04d |", line);
@@ -72,6 +72,7 @@ static void printToken(const TokenType type, const char* start, const int length
 
 		TYPE_CASE(TOKEN_DATAFROM);
 		TYPE_CASE(TOKEN_DATATO);
+		TYPE_CASE(TOKEN_NAMEDMEM);
 
 		TYPE_CASE(TOKEN_LABEL_DECL);
 
@@ -104,7 +105,7 @@ static Token makeToken(const Scanner* scanner, const TokenType type)
 		token.length -= 1;
 	token.line = scanner->line;
 
-#ifdef DEBUG_PRINT_TOKENS
+#ifdef DEBUG_PRINT
 	printToken(type, token.start, token.length, token.line);
 #endif
 
@@ -119,7 +120,7 @@ static Token errorToken(Scanner* scanner, const char* message)
 	token.length = (int)strlen(message);
 	token.line = scanner->line;
 
-#ifdef DEBUG_PRINT_TOKENS
+#ifdef DEBUG_PRINT
 	printToken(TOKEN_ERROR, message, token.length, token.line);
 #endif
 
@@ -137,35 +138,31 @@ static Token errorTokenNoAdvance(const Scanner* scanner, const char* message)
 	token.length = (int)strlen(message);
 	token.line = scanner->line;
 
-#ifdef DEBUG_PRINT_TOKENS
+#ifdef DEBUG_PRINT
 	printToken(TOKEN_ERROR, message, token.length, token.line);
 #endif
 
 	return token;
 }
 
-static bool isAlpha(const char c)
+bool isAlpha(const char c)
 {
 	return (c >= 'a' && c <= 'z') ||
-		   (c >= 'A' && c <= 'Z');
+		   (c >= 'A' && c <= 'Z') ||
+		   	c == '_';
 }
 
-typedef enum
-{
-	BINARY, OCTAL, DECIMAL, HEXADECIMAL
-} NumBase;
-
-static bool isDigit(const char c, const NumBase base)
+bool isDigit(const char c, const NumBase base)
 {
 	switch (base)
 	{
-	case BINARY:
+	case BASE_BINARY:
 		return c == '0' || c == '1';
-	case OCTAL:
+	case BASE_OCTAL:
 		return c >= '0' && c <= '7';
-	case DECIMAL:
+	case BASE_DECIMAL:
 		return c >= '0' && c <= '9';
-	case HEXADECIMAL:
+	case BASE_HEXADECIMAL:
 		return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 	}
 
@@ -271,14 +268,18 @@ static Token assemblerDirective(Scanner* scanner)
 	return errorToken(scanner, "Unknown assembler directive.");
 }
 
-static Token identifier(Scanner* scanner, const bool labelOperand, const bool isAssemblerDirective)
+static Token identifier(Scanner* scanner, const bool isLabelOperand, const bool isNamedMemDecl,
+	const bool isNamedMemAddr, const bool isAssemblerDirective)
 {
-	while (isAlpha(peek(scanner)) || isDigit(peek(scanner), DECIMAL))
+	while (isAlpha(peek(scanner)) || isDigit(peek(scanner), BASE_DECIMAL))
 		advance(scanner);
 
-	if (labelOperand)
+	if (isLabelOperand)
 		return makeToken(scanner, TOKEN_LABEL_OPERAND);
-
+	if (isNamedMemDecl)
+		return makeToken(scanner, TOKEN_MEMORY);
+	if (isNamedMemAddr)
+		return makeToken(scanner, TOKEN_CONSTANT);
 	if (isAssemblerDirective)
 		return assemblerDirective(scanner);
 
@@ -314,33 +315,33 @@ static Token number(Scanner* scanner, const TokenType type)
 		default: digit = "!"; break; // Unreachable as we check for a <= letter <= h.
 		}
 
-#ifdef DEBUG_PRINT_TOKENS
+#ifdef DEBUG_PRINT
 		printToken(type, digit, 1, scanner->line);
 #endif
 		return (Token){digit, type, 1, scanner->line};
 	}
 
-	if (!isDigit(peek(scanner), DECIMAL))
+	if (!isDigit(peek(scanner), BASE_DECIMAL))
 		return errorToken(scanner, "Expected number or base specifier after operator.");
 
-	NumBase base = DECIMAL;
+	NumBase base = BASE_DECIMAL;
 
 	if (peek(scanner) == '0')
 	{
 		advance(scanner);
 
-		if (isDigit(peek(scanner), DECIMAL))
-			base = OCTAL;
+		if (isDigit(peek(scanner), BASE_DECIMAL))
+			base = BASE_OCTAL;
 		else
 		{
 			switch (tolower(peek(scanner)))
 			{
 			case 'b':
-				base = BINARY;
+				base = BASE_BINARY;
 				advance(scanner);
 				break;
 			case 'x':
-				base = HEXADECIMAL;
+				base = BASE_HEXADECIMAL;
 				advance(scanner);
 				break;
 
@@ -364,8 +365,8 @@ static Token scanToken(Scanner* scanner)
 	const char c = peek(scanner);
 
 	if (isAlpha(c))
-		return identifier(scanner, false, false);
-	if (isDigit(c, DECIMAL))
+		return identifier(scanner, false, false, false, false);
+	if (isDigit(c, BASE_DECIMAL))
 		return number(scanner, TOKEN_CONSTANT);
 	if (c == '%')
 	{
@@ -377,7 +378,10 @@ static Token scanToken(Scanner* scanner)
 	{
 		advance(scanner);
 		scanner->start = scanner->current;
-		return number(scanner, TOKEN_MEMORY);
+
+		if (isDigit(peek(scanner), BASE_DECIMAL))
+			return number(scanner, TOKEN_MEMORY);
+		return identifier(scanner, false, true, false, false);
 	}
 	if (c == '*')
 	{
@@ -393,7 +397,7 @@ static Token scanToken(Scanner* scanner)
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected label name after label operator.");
 
-		return identifier(scanner, true, false);
+		return identifier(scanner, true, false, false, false);
 	}
 	if (c == '#')
 	{
@@ -403,7 +407,17 @@ static Token scanToken(Scanner* scanner)
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected assembler directive after assembler directive operator.");
 
-		return identifier(scanner, false, true);
+		return identifier(scanner, false, false, false, true);
+	}
+	if (c == '&')
+	{
+		advance(scanner);
+		scanner->start = scanner->current;
+
+		if (!isAlpha(peek(scanner)))
+			return errorToken(scanner, "Expected named RAM identifier after named RAM address operator.");
+
+		return identifier(scanner, false, false, true, false);
 	}
 
 	return errorToken(scanner, "Unexpected character.");
@@ -411,7 +425,7 @@ static Token scanToken(Scanner* scanner)
 
 void tokenize(Scanner* scanner)
 {
-#ifdef DEBUG_PRINT_TOKENS
+#ifdef DEBUG_PRINT
 	printf("\n=== TOKENS ===\n");
 	printf("Line | Token type           | Lexeme\n");
 	printf("-------------------------------------\n");
