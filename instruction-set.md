@@ -31,6 +31,11 @@ Output an ASCII character to stdout.
 - `out C` - Output a constant.
 - `out M` - Output the value in a memory location.
 
+### getc
+Get the ASCII character currently being typed.
+- `getc M` - Get the character being typed and store it in M. If nothing is being pressed, the value zero will be stored
+in M.
+
 ## Arithmetic
 ### inc
 Increment the value in a memory location.

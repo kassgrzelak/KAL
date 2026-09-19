@@ -1,0 +1,27 @@
+#namedmem $stack $0
+
+program_start:
+    mv %0 1
+    call .push
+    mv %0 2
+    call .push
+    mv %0 3
+    call .push
+
+    call .pop
+    out *7
+    call .pop
+    out *7
+    call .pop
+    out *7
+
+    hlt
+
+push:
+	mv *7 %0
+	inc %7
+	ret
+
+pop:
+	dec %7
+	ret

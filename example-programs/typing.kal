@@ -1,0 +1,12 @@
+start:
+	getc %0 ; Get currently typed character.
+	jmpz %0 .no_print ; Don't print if nothing is being pressed.
+	outa %0
+
+	no_print:
+	sub %0 27 ; Exit loop if ESC is pressed.
+	jmpz %0 .end
+	jmp .start
+
+end:
+	hlt
