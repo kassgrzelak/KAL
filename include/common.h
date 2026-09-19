@@ -11,8 +11,8 @@
 #include <stdlib.h>
 
 // Print tokens as they are created when calling tokenize().
-#define DEBUG_PRINT_TOKENS
+// #define DEBUG_PRINT_TOKENS
 // Print compiled bytecode.
-#define DEBUG_PRINT_BYTECODE
+// #define DEBUG_PRINT_BYTECODE
 
 #endif //KAL_COMMON_H
