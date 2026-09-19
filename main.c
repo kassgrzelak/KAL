@@ -50,7 +50,7 @@ static char* readFile(const char* path)
 	rewind(file);
 
 	// Allocate space to read file.
-	char* buffer = malloc(fileSize + 1);
+	char* buffer = malloc(fileSize + 2);
 	if (buffer == NULL)
 	{
 		printf("Not enough memory to read '%s'.\n", path);
@@ -64,23 +64,31 @@ static char* readFile(const char* path)
 		printf("Couldn't read file '%s'.\n", path);
 		exit(74);
 	}
-	buffer[bytesRead] = '\0';
+
+	// Add a newline at end of file in case there wasn't one already otherwise our scanner will get upset.
+	buffer[bytesRead] = '\n';
+	buffer[bytesRead + 1] = '\0';
 
 	// Close and return.
 	fclose(file);
 	return buffer;
 }
 
-static void runFile(const char* path)
+static int runFile(const char* path)
 {
 	char* source = readFile(path);
 
 	VM vm;
 	initVM(&vm);
-	interpret(&vm, source);
+	const InterpretResult result = interpret(&vm, source);
 
 	free(source);
 	freeVM(&vm);
+
+	if (result != INTERPRET_OK)
+		return -1;
+
+	return 0;
 }
 
 int main(const int argc, const char* argv[])
@@ -88,7 +96,7 @@ int main(const int argc, const char* argv[])
 	if (argc == 1)
 		repl();
 	else if (argc == 2)
-		runFile(argv[1]);
+		return runFile(argv[1]);
 	else
 	{
 		printf("Usage: kal [path]\n");

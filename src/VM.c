@@ -30,6 +30,7 @@ static void runtimeError(const VM* vm, const char* message)
 #define MEM() vm->ram[CONST()]
 #define PTR() vm->ram[vm->registers[CONST()]]
 
+#include "input.h" // Needed by getc handler.
 #include "vmHandlers.h"
 
 typedef void (*VMHandler)(VM*);
