@@ -1,4 +1,4 @@
-#namedmem $ascii_string $100
+#memalias $ascii_string $100
 #datafrom $ascii_string
 72 69 76 76 79 0
 

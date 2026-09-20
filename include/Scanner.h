@@ -16,7 +16,7 @@ typedef enum
 #undef X
 
 	// Assembler directives.
-	TOKEN_DATAFROM, TOKEN_DATATO, TOKEN_NAMEDMEM,
+	TOKEN_DATAFROM, TOKEN_DATATO, TOKEN_MEMALIAS,
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,

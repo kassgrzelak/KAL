@@ -1,4 +1,4 @@
-#namedmem $string $0
+#memalias $string $0
 
 start:
 	mv %0 &string

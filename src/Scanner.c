@@ -72,7 +72,7 @@ static void printToken(const TokenType type, const char* start, const int length
 
 		TYPE_CASE(TOKEN_DATAFROM);
 		TYPE_CASE(TOKEN_DATATO);
-		TYPE_CASE(TOKEN_NAMEDMEM);
+		TYPE_CASE(TOKEN_MEMALIAS);
 
 		TYPE_CASE(TOKEN_LABEL_DECL);
 

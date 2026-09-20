@@ -1,4 +1,4 @@
-#namedmem $stack $0
+#memalias $stack $0
 
 program_start:
     mv %0 1

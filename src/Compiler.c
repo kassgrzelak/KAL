@@ -240,7 +240,7 @@ static uint8_t parseConstant(Compiler* compiler, const Token* token)
 		return i;
 	}
 
-	errorAt(compiler, token, "Named RAM location name does not match any name given in any #namedmem directive"
+	errorAt(compiler, token, "Named RAM location name does not match any name given in any #memalias directive"
 		" in the program.");
 	return 0;
 }
@@ -272,7 +272,7 @@ static uint8_t parseMemoryOperand(Compiler* compiler, const Token* token)
 		return i;
 	}
 
-	errorAt(compiler, token, "Named RAM location name does not match any name given in any #namedmem directive"
+	errorAt(compiler, token, "Named RAM location name does not match any name given in any #memalias directive"
 		" in the program.");
 	return 0;
 }
@@ -435,10 +435,10 @@ static void dataToDirective(Compiler* compiler)
 	}
 }
 
-static void namedMemDirective(Compiler* compiler)
+static void memAliasDirective(Compiler* compiler)
 {
 	if (peek(compiler)->type != TOKEN_MEMORY)
-		return errorAt(compiler, compiler->current, "Expected memory location name after #namedmem directive.");
+		return errorAt(compiler, compiler->current, "Expected memory location name after #memalias directive.");
 
 
 }
@@ -456,8 +456,8 @@ static void statement(Compiler* compiler)
 		return dataFromDirective(compiler);
 	if (nextToken->type == TOKEN_DATATO)
 		return dataToDirective(compiler);
-	if (nextToken->type == TOKEN_NAMEDMEM)
-		return namedMemDirective(compiler);
+	if (nextToken->type == TOKEN_MEMALIAS)
+		return memAliasDirective(compiler);
 
 	if (nextToken->type == TOKEN_LABEL_DECL)
 	{
@@ -542,49 +542,49 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 		compiler.labelLengths[labelsSeen++] = token.length;
 	}
 
-	bool namedMemSeen = false;
+	bool memAliasSeen = false;
 
 	// Named RAM locations pass.
 	for (size_t i = 0; i < scanner.tokenArray.count; ++i)
 	{
 		Token* directiveToken = &scanner.tokenArray.tokens[i];
 
-		if (directiveToken->type != TOKEN_NAMEDMEM)
+		if (directiveToken->type != TOKEN_MEMALIAS)
 			continue;
 
-		namedMemSeen = true;
+		memAliasSeen = true;
 
 		if (scanner.tokenArray.count - 1 - i < 2)
 		{
-			errorAt(&compiler, directiveToken, "Expected memory index and name after #namedmem directive. "
+			errorAt(&compiler, directiveToken, "Expected memory index and name after #memalias directive. "
 				"Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
 		if (directiveToken[1].type != TOKEN_MEMORY)
 		{
-			errorAt(&compiler, &directiveToken[1], "Expected memory name and index after #namedmem directive. "
+			errorAt(&compiler, &directiveToken[1], "Expected memory name and index after #memalias directive. "
 				"Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
 		if (!isAlpha(directiveToken[1].start[0]))
 		{
-			errorAt(&compiler, &directiveToken[1], "Expected memory name in #namedmem directive to be an "
+			errorAt(&compiler, &directiveToken[1], "Expected memory name in #memalias directive to be an "
 				"identifier. Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
 		if (directiveToken[2].type != TOKEN_MEMORY)
 		{
-			errorAt(&compiler, &directiveToken[2], "Expected memory name and index after #namedmem directive. "
+			errorAt(&compiler, &directiveToken[2], "Expected memory name and index after #memalias directive. "
 				"Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
 		if (!isDigit(directiveToken[2].start[0], BASE_DECIMAL))
 		{
-			errorAt(&compiler, &directiveToken[2], "Expected memory index in #namedmem directive to be a "
+			errorAt(&compiler, &directiveToken[2], "Expected memory index in #memalias directive to be a "
 				"number. Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
@@ -607,7 +607,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 #ifdef DEBUG_PRINT
 	if (labelsSeen > 0)
 		printLabelDecls(&compiler, labelsSeen);
-	if (namedMemSeen)
+	if (memAliasSeen)
 		printMemNames(&compiler);
 #endif
 

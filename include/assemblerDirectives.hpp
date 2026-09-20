@@ -15,7 +15,7 @@ typedef struct
 static const AssemblerDirective assemblerDirectives[] = {
 	{TOKEN_DATAFROM, "datafrom"},
 	{TOKEN_DATATO, "datato"},
-	{TOKEN_NAMEDMEM, "namedmem"},
+	{TOKEN_MEMALIAS, "memalias"},
 };
 
 static const uint8_t ASSEMBLER_DIRECTIVE_COUNT =  sizeof(assemblerDirectives) / sizeof(AssemblerDirective);
