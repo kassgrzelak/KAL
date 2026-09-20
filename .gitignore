@@ -2,3 +2,5 @@
 .idea/
 # Python virtual environment.
 .venv/
+# Dev debug file
+debug.kal

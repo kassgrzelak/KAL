@@ -1,6 +1,12 @@
 #memalias $string $0
+#memalias $welcome_string $100
+#datafrom $welcome_string "Type something: "
 
 start:
+	; Print welcome string.
+	mv %0 &welcome_string
+	call .print_string
+
 	mv %0 &string
 
 	typing_loop:
@@ -18,16 +24,18 @@ start:
 		jmp .typing_loop
 
 	done_typing:
-	; Add null-termination and reset pointer to beginning of string.
+	; Add null-termination and reset pointer to beginning of string, then print.
 	mv *0 0
 	mv %0 &string
-
-	; Print string until null is reached.
-	print_loop:
-		outa *0
-		inc %0
-		jmpz *0 .end
-		jmp .print_loop
-
-end:
+	call .print_string
 	hlt
+
+print_string:
+	; Print character under pointer until null is reached.
+	outa *0
+	inc %0
+	jmpz *0 .print_string_ret
+	jmp .print_string
+
+	print_string_ret:
+	ret

@@ -22,7 +22,7 @@ typedef enum
 	TOKEN_LABEL_DECL,
 
 	// Operand types. All operand types MUST be in a contiguous range.
-	TOKEN_CONSTANT, TOKEN_REGISTER, TOKEN_MEMORY, TOKEN_POINTER, TOKEN_LABEL_OPERAND,
+	TOKEN_CONSTANT, TOKEN_STRINGCHAR, TOKEN_REGISTER, TOKEN_MEMORY, TOKEN_POINTER, TOKEN_LABEL_OPERAND,
 
 	// Special.
 	TOKEN_EOF, TOKEN_ERROR, TOKEN_SKIP
@@ -60,6 +60,7 @@ typedef struct
 	const char* current;
 	int line;
 	TokenArray tokenArray;
+	bool readingString;
 } Scanner;
 
 void initScanner(Scanner* scanner, const char* source);

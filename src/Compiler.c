@@ -12,6 +12,7 @@ AddressingMode tokenTypeToAddressingMode(const TokenType type)
 {
 	switch (type) {
 	case TOKEN_CONSTANT:
+	case TOKEN_STRINGCHAR:
 		return AM_CONST;
 	case TOKEN_REGISTER:
 		return AM_REG;
@@ -63,6 +64,18 @@ typedef struct
 	const Token* current;
 } Compiler;
 
+static bool isTokenType(const Token* token, const TokenType type)
+{
+	switch (type)
+	{
+	case TOKEN_CONSTANT:
+		return token->type == TOKEN_CONSTANT || token->type == TOKEN_STRINGCHAR;
+
+	default:
+		return token->type == type;
+	}
+}
+
 static void errorAt(Compiler* compiler, const Token* token, const char* message)
 {
 	if (compiler->panicMode) return;
@@ -72,9 +85,9 @@ static void errorAt(Compiler* compiler, const Token* token, const char* message)
 
 	printf("[line %d] Error", token->line);
 
-	if (token->type == TOKEN_EOF)
+	if (isTokenType(token, TOKEN_EOF))
 		printf(" at end");
-	else if (token->type == TOKEN_ERROR)
+	else if (isTokenType(token, TOKEN_ERROR))
 	{ /* Nothing. */ }
 	else
 		printf(" at '%.*s'", token->length, token->start);
@@ -98,9 +111,9 @@ static void warningAt(Compiler* compiler, const Token* token, const char* messag
 {
 	printf("[line %d] Warning", token->line);
 
-	if (token->type == TOKEN_EOF)
+	if (isTokenType(token, TOKEN_EOF))
 		printf(" at end");
-	else if (token->type == TOKEN_ERROR)
+	else if (isTokenType(token, TOKEN_ERROR))
 	{ /* Nothing. */ }
 	else
 		printf(" at '%.*s'", token->length, token->start);
@@ -127,7 +140,7 @@ static void advance(Compiler* compiler)
 
 static void endPanic(Compiler* compiler)
 {
-	while (!isStatementStarter(peek(compiler)->type) && peek(compiler)->type != TOKEN_EOF)
+	while (!isStatementStarter(peek(compiler)->type) && !isTokenType(peek(compiler), TOKEN_EOF))
 		advance(compiler);
 
 	compiler->panicMode = false;
@@ -215,6 +228,9 @@ static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
 
 static uint8_t parseConstant(Compiler* compiler, const Token* token)
 {
+	if (isTokenType(token, TOKEN_STRINGCHAR))
+		return token->start[0];
+
 	if (isDigit(token->start[0], BASE_DECIMAL))
 		return parseNumberOperand(compiler, token);
 
@@ -281,11 +297,11 @@ static uint8_t parseOperand(Compiler* compiler, const int index)
 {
 	const Token* token = compiler->operands[index];
 
-	if (token->type == TOKEN_LABEL_OPERAND)
+	if (isTokenType(token, TOKEN_LABEL_OPERAND))
 		return parseLabelOperand(compiler, token);
-	if (token->type == TOKEN_MEMORY)
+	if (isTokenType(token, TOKEN_MEMORY))
 		return parseMemoryOperand(compiler, token);
-	if (token->type == TOKEN_CONSTANT)
+	if (isTokenType(token, TOKEN_CONSTANT))
 		return parseConstant(compiler, token);
 
 	return parseNumberOperand(compiler, token);
@@ -318,10 +334,10 @@ static void printOperand(const uint8_t operand)
 
 static void checkOperandValue(Compiler* compiler, const uint8_t value, const Token* token)
 {
-	if (token->type == TOKEN_REGISTER)
+	if (isTokenType(token, TOKEN_REGISTER))
 		if (value >= 8)
 			errorAt(compiler, token, "Invalid register index.");
-	if (token->type == TOKEN_POINTER)
+	if (isTokenType(token, TOKEN_POINTER))
 		if (value >= 8)
 			errorAt(compiler, token, "Invalid pointer index.");
 }
@@ -383,7 +399,7 @@ static void parseInstruction(Compiler* compiler)
 
 static void dataFromDirective(Compiler* compiler)
 {
-	if (peek(compiler)->type != TOKEN_MEMORY)
+	if (!isTokenType(peek(compiler), TOKEN_MEMORY))
 		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
 
 	int ramIndex = parseMemoryOperand(compiler, peek(compiler));
@@ -391,15 +407,15 @@ static void dataFromDirective(Compiler* compiler)
 
 	int elementNum = 0;
 
-	for (TokenType type = compiler->current[elementNum].type; type == TOKEN_CONSTANT;)
-		type = compiler->current[++elementNum].type;
+	for (; isTokenType(&compiler->current[elementNum], TOKEN_CONSTANT); ++elementNum)
+		;
 
 
 	if (ramIndex + elementNum - 1 > 255)
 		return errorAt(compiler, compiler->current, "Number of elements in #datafrom directive exceed the"
 			" space in RAM.");
 
-	while (peek(compiler)->type == TOKEN_CONSTANT)
+	while (isTokenType(peek(compiler), TOKEN_CONSTANT))
 	{
 		const uint8_t value = parseConstant(compiler, peek(compiler));
 		compiler->ram[ramIndex++] = value;
@@ -409,7 +425,7 @@ static void dataFromDirective(Compiler* compiler)
 
 static void dataToDirective(Compiler* compiler)
 {
-	if (peek(compiler)->type != TOKEN_MEMORY)
+	if (!isTokenType(peek(compiler), TOKEN_MEMORY))
 		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
 
 	int ramIndex = parseMemoryOperand(compiler, peek(compiler));
@@ -417,8 +433,8 @@ static void dataToDirective(Compiler* compiler)
 
 	int elementNum = 0;
 
-	for (TokenType type = compiler->current[elementNum].type; type == TOKEN_CONSTANT;)
-		type = compiler->current[++elementNum].type;
+	for (; isTokenType(&compiler->current[elementNum], TOKEN_CONSTANT); ++elementNum)
+		;
 
 
 	if (ramIndex - elementNum + 1 < 0)
@@ -427,7 +443,7 @@ static void dataToDirective(Compiler* compiler)
 
 	ramIndex -= elementNum - 1;
 
-	while (peek(compiler)->type == TOKEN_CONSTANT)
+	while (isTokenType(peek(compiler), TOKEN_CONSTANT))
 	{
 		const uint8_t value = parseConstant(compiler, peek(compiler));
 		compiler->ram[ramIndex++] = value;
@@ -437,7 +453,7 @@ static void dataToDirective(Compiler* compiler)
 
 static void memAliasDirective(Compiler* compiler)
 {
-	if (peek(compiler)->type != TOKEN_MEMORY)
+	if (!isTokenType(peek(compiler), TOKEN_MEMORY))
 		return errorAt(compiler, compiler->current, "Expected memory location name after #memalias directive.");
 
 
@@ -528,7 +544,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	{
 		const Token token = scanner.tokenArray.tokens[i];
 
-		if (token.type != TOKEN_LABEL_DECL)
+		if (!isTokenType(&token, TOKEN_LABEL_DECL))
 			continue;
 		if (labelsSeen == 256)
 		{
@@ -549,7 +565,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	{
 		Token* directiveToken = &scanner.tokenArray.tokens[i];
 
-		if (directiveToken->type != TOKEN_MEMALIAS)
+		if (!isTokenType(directiveToken, TOKEN_MEMALIAS))
 			continue;
 
 		memAliasSeen = true;
@@ -561,7 +577,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 			freeScanner(&scanner);
 			return false;
 		}
-		if (directiveToken[1].type != TOKEN_MEMORY)
+		if (!isTokenType(&directiveToken[1], TOKEN_MEMORY))
 		{
 			errorAt(&compiler, &directiveToken[1], "Expected memory name and index after #memalias directive. "
 				"Compilation aborted.");
@@ -575,7 +591,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 			freeScanner(&scanner);
 			return false;
 		}
-		if (directiveToken[2].type != TOKEN_MEMORY)
+		if (!isTokenType(&directiveToken[2], TOKEN_MEMORY))
 		{
 			errorAt(&compiler, &directiveToken[2], "Expected memory name and index after #memalias directive. "
 				"Compilation aborted.");
@@ -617,12 +633,12 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	printf("------------------------------\n");
 #endif
 
-	if (peek(&compiler)->type == TOKEN_ERROR)
+	if (isTokenType(peek(&compiler), TOKEN_ERROR))
 		errorAt(&compiler, peek(&compiler), peek(&compiler)->start);
 
-	while (peek(&compiler)->type != TOKEN_EOF)
+	while (!isTokenType(peek(&compiler), TOKEN_EOF))
 	{
-		if (peek(&compiler)->type == TOKEN_SKIP)
+		if (isTokenType(peek(&compiler), TOKEN_SKIP))
 		{
 			advance(&compiler);
 			continue;

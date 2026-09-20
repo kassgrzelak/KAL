@@ -46,6 +46,7 @@ void initScanner(Scanner* scanner, const char* source)
 	scanner->current = source;
 	scanner->line = 1;
 	initTokenArray(&scanner->tokenArray);
+	scanner->readingString = false;
 }
 
 void freeScanner(const Scanner* scanner)
@@ -77,6 +78,7 @@ static void printToken(const TokenType type, const char* start, const int length
 		TYPE_CASE(TOKEN_LABEL_DECL);
 
 		TYPE_CASE(TOKEN_CONSTANT);
+		TYPE_CASE(TOKEN_STRINGCHAR);
 		TYPE_CASE(TOKEN_REGISTER);
 		TYPE_CASE(TOKEN_MEMORY);
 		TYPE_CASE(TOKEN_POINTER);
@@ -177,6 +179,12 @@ static bool atEnd(const Scanner* scanner)
 static char advance(Scanner* scanner)
 {
 	return *scanner->current++;
+}
+
+static void skip(Scanner* scanner)
+{
+	advance(scanner);
+	scanner->start = scanner->current;
 }
 
 static char peek(const Scanner* scanner)
@@ -357,6 +365,12 @@ static Token number(Scanner* scanner, const TokenType type)
 	return makeToken(scanner, type);
 }
 
+static Token stringChar(Scanner* scanner)
+{
+	advance(scanner);
+	return makeToken(scanner, TOKEN_STRINGCHAR);
+}
+
 static Token scanToken(Scanner* scanner)
 {
 	if (atEnd(scanner))
@@ -364,20 +378,38 @@ static Token scanToken(Scanner* scanner)
 
 	const char c = peek(scanner);
 
+	if (c != '"' && scanner->readingString)
+	{
+		return stringChar(scanner);
+	}
+
+	if (c == '"' && scanner->readingString)
+	{
+		skip(scanner);
+		scanner->readingString = false;
+		const Token skipToken = {NULL, TOKEN_SKIP, 0, 0};
+		return skipToken;
+	}
+
+	if (c == '"')
+	{
+		skip(scanner);
+		scanner->readingString = true; // Must be false at this point in the code due to above ifs.
+		return stringChar(scanner);
+	}
+
 	if (isAlpha(c))
 		return identifier(scanner, false, false, false, false);
 	if (isDigit(c, BASE_DECIMAL))
 		return number(scanner, TOKEN_CONSTANT);
 	if (c == '%')
 	{
-		advance(scanner);
-		scanner->start = scanner->current;
+		skip(scanner);
 		return number(scanner, TOKEN_REGISTER);
 	}
 	if (c == '$')
 	{
-		advance(scanner);
-		scanner->start = scanner->current;
+		skip(scanner);
 
 		if (isDigit(peek(scanner), BASE_DECIMAL))
 			return number(scanner, TOKEN_MEMORY);
@@ -385,14 +417,12 @@ static Token scanToken(Scanner* scanner)
 	}
 	if (c == '*')
 	{
-		advance(scanner);
-		scanner->start = scanner->current;
+		skip(scanner);
 		return number(scanner, TOKEN_POINTER);
 	}
 	if (c == '.')
 	{
-		advance(scanner);
-		scanner->start = scanner->current;
+		skip(scanner);
 
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected label name after label operator.");
@@ -401,8 +431,7 @@ static Token scanToken(Scanner* scanner)
 	}
 	if (c == '#')
 	{
-		advance(scanner);
-		scanner->start = scanner->current;
+		skip(scanner);
 
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected assembler directive after assembler directive operator.");
@@ -411,8 +440,7 @@ static Token scanToken(Scanner* scanner)
 	}
 	if (c == '&')
 	{
-		advance(scanner);
-		scanner->start = scanner->current;
+		skip(scanner);
 
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected named RAM identifier after named RAM address operator.");
@@ -437,10 +465,24 @@ void tokenize(Scanner* scanner)
 	for (;;)
 	{
 		const Token token = scanToken(scanner);
+		
+		if (token.type == TOKEN_EOF)
+		{
+			if (scanner->readingString)
+				writeTokenArray(&scanner->tokenArray, errorTokenNoAdvance(scanner, "End of file reached before"
+					" closing double quote of string."));
+			
+			writeTokenArray(&scanner->tokenArray, token);
+			break;
+		}
+		
 		writeTokenArray(&scanner->tokenArray, token);
 
-		if (token.type == TOKEN_EOF)
-			break;
+		if (scanner->readingString)
+		{
+			scanner->start = scanner->current;
+			continue;
+		}
 
 		if (!skipWhitespace(scanner))
 			writeTokenArray(&scanner->tokenArray, errorTokenNoAdvance(scanner, "Expected whitespace before "
