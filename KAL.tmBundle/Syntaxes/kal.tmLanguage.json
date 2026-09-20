@@ -1,0 +1,57 @@
+{
+  "name": "KAL",
+  "scopeName": "source.kal",
+  "fileTypes": ["kal"],
+  "patterns": [{"include": "#language"}],
+
+  "repository":
+  {
+    "language":
+    {
+      "patterns": [{"include": "#mnemonic"}, {"include": "#directive"}, {"include":  "#comment"},
+        {"include":  "#constant"}, {"include":  "#register"}, {"include":  "#memory"}, {"include":  "#pointer"}]
+    },
+
+    "mnemonic":
+    {
+      "name": "keyword.mnemonic.kal",
+      "match": "(?i)(\\badd\\b|\\band\\b|\\bcall\\b|\\bdec\\b|\\bdiv\\b|\\bgetc\\b|\\bhlt\\b|\\binc\\b|\\bjmp\\b|\\bjmpnz\\b|\\bjmpz\\b|\\bmul\\b|\\bmv\\b|\\bnop\\b|\\bnot\\b|\\bor\\b|\\bout\\b|\\bouta\\b|\\bret\\b|\\bsub\\b|\\bxor\\b)"
+    },
+
+    "directive":
+    {
+      "name": "keyword.control.directive.kal",
+      "match": "(?i)#datafrom\\b|#datato\\b|#namedmem\\b"
+    },
+
+    "comment":
+    {
+      "name": "comment.line.kal",
+      "match": ";[^;\\n]*;|;[^;]*\\n"
+    },
+
+    "constant":
+    {
+      "name": "constant.number.kal",
+      "match": "(?i)((?<!\\S)(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+))|(&[a-z0-9_]+)"
+    },
+
+    "register":
+    {
+      "name": "support.function.kal",
+      "match": "(?i)%(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+|[a-h])"
+    },
+
+    "memory":
+    {
+      "name": "entity.name.class.memory.kal",
+      "match": "(?i)\\$((0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+)|[a-z0-9_]+)"
+    },
+
+    "pointer":
+    {
+      "name": "entity.name.class.pointer.kal",
+      "match": "(?i)\\*(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+|[a-h])"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+#namedmem $string $0
+
+start:
+	mv %0 &string
+
+	typing_loop:
+		getc %1
+		jmpz %1 .typing_loop ; Ignore when no key is being pressed.
+		outa %1 ; Echo typed character.
+
+		; Store typed character in string and increment pointer.
+		mv *0 %1
+		inc %0
+
+		; If typed character was LF, exit loop.
+		sub %1 10
+		jmpz %1 .done_typing
+		jmp .typing_loop
+
+	done_typing:
+	; Add null-termination and reset pointer to beginning of string.
+	mv *0 0
+	mv %0 &string
+
+	; Print string until null is reached.
+	print_loop:
+		outa *0
+		inc %0
+		jmpz *0 .end
+		jmp .print_loop
+
+end:
+	hlt

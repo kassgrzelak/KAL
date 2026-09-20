@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>name</key>
+    <string>KAL</string>
+
+    <key>uuid</key>
+    <string>E6336AE2-DA1E-4EC2-8291-B1EEA205677C</string>
+
+    <key>description</key>
+    <string>TextMate syntax highlighting for KAL.</string>
+</dict>
+</plist>
