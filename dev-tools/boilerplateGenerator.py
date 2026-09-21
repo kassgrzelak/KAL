@@ -205,7 +205,7 @@ static const InstrVariant {instr.name.lower()}Variants[] = {{
 """
 
     for sig in instr.signatures:
-        result += f"\t{{OP_{instr.name}_{sig}, {len(sig) + 1}, 0{''.join([sig_letter_to_sig_digit(letter) for letter in sig])}}},\n"
+        result += f"\t{{OP_{instr.name}_{sig}, 0{''.join([sig_letter_to_sig_digit(letter) for letter in sig])}}},\n"
 
     result += "};\n\n#endif"
 
