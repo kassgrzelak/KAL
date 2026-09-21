@@ -32,9 +32,15 @@
 
     "string":
     {
-      "name": "string",
-      "begin": "\"",
-      "end": "\""
+      "name": "string.kal",
+      "begin": "\"|'",
+      "end": "\"|'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.kal",
+          "match": "\\\\."
+        }
+      ]
     },
 
     "constant":

@@ -19,7 +19,7 @@ start:
 		inc %0
 
 		; If typed character was LF, exit loop.
-		sub %1 10
+		sub %1 '\n'
 		jmpz %1 .done_typing
 		jmp .typing_loop
 

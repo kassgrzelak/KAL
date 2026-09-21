@@ -149,8 +149,8 @@ out $my_number
 This program creates an alias for RAM address 0 called `my_number`, uses it to move the value of 10 into it, then
 prints it to the screen. Note that you still must prepend the name with the RAM operator (`$`).
 
-Because the #memalias directive is dealt with in a separate pass before any instruction statements are compiled, a named
-RAM location doesn't even have to be named before it's used in the program, making this a completely valid KAL program:
+Because the #memalias directive is dealt with in a separate pass before any instruction statements are compiled, a RAM
+alias doesn't even have to be defined above where it's used in the program, making this a completely valid KAL program:
 
 ```
 mv $my_number 10
@@ -159,19 +159,19 @@ out $my_number
 #memalias $my_number $0
 ```
 
-You can combine this directive with #datafrom directive to create named arrays in your code.
+You can combine this directive with #datafrom directive to create arrays with identifiers in your code.
 
 ```
-#memalias $ascii_string $100
+#memalias $my_numbers $100
 #datafrom $100
-72 69 76 76 79 0
+1 2 3 4
 ```
 
-#### Named RAM Address Operator
-However, it would be nice to be able to recover the actual address the name is aliased to while still using that handy
-identifier. This is what the named RAM address operator (`&`) is for.
+#### Aliased RAM Address Operator
+However, it would be nice to be able to recover the actual address the identifier is aliased to while still using that 
+handy identifier. This is what the aliased RAM address operator (`&`) is for.
 
-When followed by a named RAM address identifier, it evaluates to the numerical address that identifier is aliased to.
+When followed by an aliased RAM address identifier, it evaluates to the numerical address that identifier is aliased to.
 
 ```
 #memalias $named_location $10

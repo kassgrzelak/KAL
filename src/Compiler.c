@@ -8,15 +8,18 @@
 
 #include "instructions.h"
 
+// Convert TokenType enum to AddressingMode enum.
 AddressingMode tokenTypeToAddressingMode(const TokenType type)
 {
 	switch (type) {
 	case TOKEN_CONSTANT:
-	case TOKEN_STRINGCHAR:
+	case TOKEN_STRING_CHAR:
+	case TOKEN_ALIAS_ADDRESS:
 		return AM_CONST;
 	case TOKEN_REGISTER:
 		return AM_REG;
 	case TOKEN_MEMORY:
+	case TOKEN_MEMORY_ALIAS:
 		return AM_MEM;
 	case TOKEN_POINTER:
 		return AM_PTR;
@@ -28,6 +31,7 @@ AddressingMode tokenTypeToAddressingMode(const TokenType type)
 	}
 }
 
+// Calculate 16-bit addressing mode signature from individual operand types.
 uint16_t signatureFromModes(const AddressingMode* modes, const int count)
 {
 	uint16_t signature = 0;
@@ -49,8 +53,8 @@ typedef struct
 	const char* labelNames[256];
 	int labelLengths[256];
 
-	const char* memNames[256];
-	int memNameLengths[256];
+	const char* memAliases[256];
+	int memAliasLengths[256];
 
 	bool panicMode;
 	bool hadError;
@@ -64,15 +68,26 @@ typedef struct
 	const Token* current;
 } Compiler;
 
-static bool isTokenType(const Token* token, const TokenType type)
+static bool isAddressingModeType(const Token* token, const AddressingMode operandType)
 {
-	switch (type)
+	switch (token->type)
 	{
 	case TOKEN_CONSTANT:
-		return token->type == TOKEN_CONSTANT || token->type == TOKEN_STRINGCHAR;
+	case TOKEN_STRING_CHAR:
+	case TOKEN_ALIAS_ADDRESS:
+		return operandType == AM_CONST;
+	case TOKEN_REGISTER:
+		return operandType == AM_REG;
+	case TOKEN_MEMORY:
+	case TOKEN_MEMORY_ALIAS:
+		return operandType == AM_MEM;
+	case TOKEN_POINTER:
+		return operandType == AM_PTR;
+	case TOKEN_LABEL_OPERAND:
+		return operandType == AM_LABEL;
 
 	default:
-		return token->type == type;
+		return false;
 	}
 }
 
@@ -85,9 +100,9 @@ static void errorAt(Compiler* compiler, const Token* token, const char* message)
 
 	printf("[line %d] Error", token->line);
 
-	if (isTokenType(token, TOKEN_EOF))
+	if (token->type == TOKEN_EOF)
 		printf(" at end");
-	else if (isTokenType(token, TOKEN_ERROR))
+	else if (token->type == TOKEN_ERROR)
 	{ /* Nothing. */ }
 	else
 		printf(" at '%.*s'", token->length, token->start);
@@ -111,9 +126,9 @@ static void warningAt(Compiler* compiler, const Token* token, const char* messag
 {
 	printf("[line %d] Warning", token->line);
 
-	if (isTokenType(token, TOKEN_EOF))
+	if (token->type == TOKEN_EOF)
 		printf(" at end");
-	else if (isTokenType(token, TOKEN_ERROR))
+	else if (token->type == TOKEN_ERROR)
 	{ /* Nothing. */ }
 	else
 		printf(" at '%.*s'", token->length, token->start);
@@ -121,13 +136,16 @@ static void warningAt(Compiler* compiler, const Token* token, const char* messag
 	printf(": %s\n", message);
 }
 
+// Get the next token but don't consume it.
 static const Token* peek(const Compiler* compiler)
 {
 	return compiler->current;
 }
 
+// Consume the next token.
 static void advance(Compiler* compiler)
 {
+	// Long strings of error tokens must be moved past.
 	for (;;)
 	{
 		++compiler->current;
@@ -138,17 +156,19 @@ static void advance(Compiler* compiler)
 	}
 }
 
+// Consume tokens until a safe starting point to try compiling again is found.
 static void endPanic(Compiler* compiler)
 {
-	while (!isStatementStarter(peek(compiler)->type) && !isTokenType(peek(compiler), TOKEN_EOF))
+	while (!isStatementStarterType(peek(compiler)->type) && peek(compiler)->type != TOKEN_EOF)
 		advance(compiler);
 
 	compiler->panicMode = false;
 }
 
+// Consume all the following operand-type tokens and add them to the operand stack.
 void consumeOperands(Compiler* compiler)
 {
-	while (isOperand(peek(compiler)->type))
+	while (isOperandType(peek(compiler)->type))
 	{
 		if (compiler->operandCount == MAX_OPERAND_NUM)
 			return noAddressingModeError(compiler);
@@ -158,45 +178,59 @@ void consumeOperands(Compiler* compiler)
 	}
 }
 
+// Add a byte to the end of the bytecode array.
 static void emitByte(const Compiler* compiler, const uint8_t byte)
 {
 	writeBytecode(compiler->bytecode, byte);
 }
 
-static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
+// Find the index of a case-insensitive name in an indexed name array. Returns -1 if no match is found.
+static int findName(const char* const names[256], const int lengths[256], const Token* token)
 {
 	for (int i = 0; i < 256; ++i)
 	{
-		if (compiler->labelNames[i] == NULL)
+		if (names[i] == NULL)
 			continue;
-		if (compiler->labelLengths[i] != token->length)
+		if (lengths[i] != token->length)
 			continue;
 
 		bool notEqual = false;
 
 		for (int charIndex = 0; charIndex < token->length; ++charIndex)
-			if (tolower(compiler->labelNames[i][charIndex]) != tolower(token->start[charIndex]))
+			if (tolower(names[i][charIndex]) != tolower(token->start[charIndex]))
 			{
 				notEqual = true;
 				break;
 			}
 
-		if (notEqual)
-			continue;
-
-		return i;
+		if (!notEqual)
+			return i;
 	}
+
+	return -1;
+}
+
+// Parse a label operand token and return its index in the labelNames array.
+static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
+{
+	// Iterate over all label declarations to see if a match is found.
+	const int labelIndex = findName(compiler->labelNames, compiler->labelLengths, token);
+	if (labelIndex != -1)
+		return labelIndex;
 
 	errorAt(compiler, token, "Label operand does not refer to an existing label.");
 	return 0;
 }
 
+// Parse a numerical operand token (constant, memory, or pointer) and return its numerical value.
+// The token passed to this function MUST be numerical.
 static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
 {
 	if (!isdigit(token->start[0]))
 		warningAt(compiler, token, "Attempted to parse non-number token in parseNumberOperand(). This is a "
 			"compiler bug, not your fault.");
 
+	// Parse base specifier if present.
 	if (token->length >= 2 && token->start[0] == '0')
 	{
 		if (tolower(token->start[1]) == 'b')
@@ -226,82 +260,84 @@ static uint8_t parseNumberOperand(Compiler* compiler, const Token* token)
 	return number;
 }
 
+static uint8_t parseStringChar(Compiler* compiler, const Token* token)
+{
+	if (token->start[0] == '\\')
+	{
+		switch (token->start[1])
+		{
+		case '0':
+			return '\0';
+		case 'a':
+			return '\a';
+		case 'b':
+			return '\b';
+		case 'f':
+			return '\f';
+		case 'n':
+			return '\n';
+		case 'r':
+			return '\r';
+		case 't':
+			return '\t';
+		case 'v':
+			return '\v';
+
+		default:
+			return token->start[1];
+		}
+	}
+
+	return token->start[0];
+}
+
+// Parse a constant token (constant or string char) and return its numerical value.
 static uint8_t parseConstant(Compiler* compiler, const Token* token)
 {
-	if (isTokenType(token, TOKEN_STRINGCHAR))
-		return token->start[0];
+	if (token->type == TOKEN_STRING_CHAR)
+		return parseStringChar(compiler, token);
 
-	if (isDigit(token->start[0], BASE_DECIMAL))
+	if (token->type == TOKEN_CONSTANT)
 		return parseNumberOperand(compiler, token);
 
-	for (int i = 0; i < 256; ++i)
-	{
-		if (compiler->memNames[i] == NULL)
-			continue;
-		if (compiler->memNameLengths[i] != token->length)
-			continue;
+	// Else alias address.
 
-		bool notEqual = false;
+	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token);
+	if (memIndex != -1)
+		return memIndex;
 
-		for (int charIndex = 0; charIndex < token->length; ++charIndex)
-			if (tolower(compiler->memNames[i][charIndex]) != tolower(token->start[charIndex]))
-			{
-				notEqual = true;
-				break;
-			}
-
-		if (notEqual)
-			continue;
-
-		return i;
-	}
-
-	errorAt(compiler, token, "Named RAM location name does not match any name given in any #memalias directive"
+	errorAt(compiler, token, "Aliased RAM location name does not match any name given in any #memalias directive"
 		" in the program.");
 	return 0;
 }
 
+// Parse a RAM operand and return the numerical address it refers to.
 static uint8_t parseMemoryOperand(Compiler* compiler, const Token* token)
 {
-	if (isDigit(token->start[0], BASE_DECIMAL))
+	if (token->type == TOKEN_MEMORY)
 		return parseNumberOperand(compiler, token);
 
-	for (int i = 0; i < 256; ++i)
-	{
-		if (compiler->memNames[i] == NULL)
-			continue;
-		if (compiler->memNameLengths[i] != token->length)
-			continue;
+	// Else aliased mem address.
 
-		bool notEqual = false;
+	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token);
+	if (memIndex != -1)
+		return memIndex;
 
-		for (int charIndex = 0; charIndex < token->length; ++charIndex)
-			if (tolower(compiler->memNames[i][charIndex]) != tolower(token->start[charIndex]))
-			{
-				notEqual = true;
-				break;
-			}
-
-		if (notEqual)
-			continue;
-
-		return i;
-	}
-
-	errorAt(compiler, token, "Named RAM location name does not match any name given in any #memalias directive"
+	errorAt(compiler, token, "Aliased RAM location name does not match any name given in any #memalias directive"
 		" in the program.");
 	return 0;
 }
 
+// Parse an operand and return its numerical value.
 static uint8_t parseOperand(Compiler* compiler, const int index)
 {
 	const Token* token = compiler->operands[index];
 
-	if (isTokenType(token, TOKEN_LABEL_OPERAND))
+	if (isAddressingModeType(token, AM_LABEL))
 		return parseLabelOperand(compiler, token);
-	if (isTokenType(token, TOKEN_MEMORY))
+	if (isAddressingModeType(token, AM_MEM))
 		return parseMemoryOperand(compiler, token);
-	if (isTokenType(token, TOKEN_CONSTANT))
+	if (isAddressingModeType(token, AM_CONST))
 		return parseConstant(compiler, token);
 
 	return parseNumberOperand(compiler, token);
@@ -332,20 +368,24 @@ static void printOperand(const uint8_t operand)
 }
 #endif
 
-static void checkOperandValue(Compiler* compiler, const uint8_t value, const Token* token)
+// Bounds-check register and pointer token indices.
+static void checkRegisterPointerIndex(Compiler* compiler, const uint8_t value, const Token* token)
 {
-	if (isTokenType(token, TOKEN_REGISTER))
+	if (token->type == TOKEN_REGISTER)
 		if (value >= 8)
 			errorAt(compiler, token, "Invalid register index.");
-	if (isTokenType(token, TOKEN_POINTER))
+	if (token->type == TOKEN_POINTER)
 		if (value >= 8)
 			errorAt(compiler, token, "Invalid pointer index.");
 }
 
+// Having consumed an instruction token and all the following operand tokens, decide which opcode they correspond to and
+// emit the appropriate bytes.
 static void parseInstruction(Compiler* compiler)
 {
 	const InstrDef* def = NULL;
 
+	// Search instruction table for an instruction matching the token type.
 	for (int i = 0; i < INSTR_COUNT; ++i)
 		if (instrTable[i].token == compiler->currentInstruction->type)
 		{
@@ -367,6 +407,7 @@ static void parseInstruction(Compiler* compiler)
 
 	const InstrVariant* variant = NULL;
 
+	// Search variants array for a variant matching the same operand types as were given.
 	for (int i = 0; i < def->variantCount; ++i)
 		if (def->variants[i].signature == signature)
 		{
@@ -387,7 +428,7 @@ static void parseInstruction(Compiler* compiler)
 	{
 		const uint8_t operand = parseOperand(compiler, i);
 
-		checkOperandValue(compiler, operand, compiler->operands[i]);
+		checkRegisterPointerIndex(compiler, operand, compiler->operands[i]);
 
 #ifdef DEBUG_PRINT
 		printOperand(operand);
@@ -399,23 +440,22 @@ static void parseInstruction(Compiler* compiler)
 
 static void dataFromDirective(Compiler* compiler)
 {
-	if (!isTokenType(peek(compiler), TOKEN_MEMORY))
-		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
+	if (!isAddressingModeType(peek(compiler), AM_MEM))
+		return errorAt(compiler, compiler->current, "Expected ram address after #datafrom directive.");
 
 	int ramIndex = parseMemoryOperand(compiler, peek(compiler));
 	advance(compiler);
 
-	int elementNum = 0;
+	// Get element count for bounds-checking.
+	int elementCount = 0;
+	for (; isAddressingModeType(&compiler->current[elementCount], AM_CONST); ++elementCount)
+	{}
 
-	for (; isTokenType(&compiler->current[elementNum], TOKEN_CONSTANT); ++elementNum)
-		;
-
-
-	if (ramIndex + elementNum - 1 > 255)
+	if (ramIndex + elementCount - 1 > 255)
 		return errorAt(compiler, compiler->current, "Number of elements in #datafrom directive exceed the"
 			" space in RAM.");
 
-	while (isTokenType(peek(compiler), TOKEN_CONSTANT))
+	while (isAddressingModeType(peek(compiler), AM_CONST))
 	{
 		const uint8_t value = parseConstant(compiler, peek(compiler));
 		compiler->ram[ramIndex++] = value;
@@ -425,25 +465,24 @@ static void dataFromDirective(Compiler* compiler)
 
 static void dataToDirective(Compiler* compiler)
 {
-	if (!isTokenType(peek(compiler), TOKEN_MEMORY))
-		return errorAt(compiler, compiler->current, "Expected ram index after #datafrom directive.");
+	if (!isAddressingModeType(peek(compiler), AM_MEM))
+		return errorAt(compiler, compiler->current, "Expected ram address after #datafrom directive.");
 
 	int ramIndex = parseMemoryOperand(compiler, peek(compiler));
 	advance(compiler);
 
-	int elementNum = 0;
+	// Get element count for bounds-checking.
+	int elementCount = 0;
+	for (; isAddressingModeType(&compiler->current[elementCount], AM_CONST); ++elementCount)
+	{}
 
-	for (; isTokenType(&compiler->current[elementNum], TOKEN_CONSTANT); ++elementNum)
-		;
-
-
-	if (ramIndex - elementNum + 1 < 0)
+	if (ramIndex - elementCount + 1 < 0)
 		return errorAt(compiler, compiler->current, "Number of elements in #datato directive exceed the"
 			" space in RAM.");
 
-	ramIndex -= elementNum - 1;
+	ramIndex -= elementCount - 1;
 
-	while (isTokenType(peek(compiler), TOKEN_CONSTANT))
+	while (isAddressingModeType(peek(compiler), AM_CONST))
 	{
 		const uint8_t value = parseConstant(compiler, peek(compiler));
 		compiler->ram[ramIndex++] = value;
@@ -451,20 +490,13 @@ static void dataToDirective(Compiler* compiler)
 	}
 }
 
-static void memAliasDirective(Compiler* compiler)
-{
-	if (!isTokenType(peek(compiler), TOKEN_MEMORY))
-		return errorAt(compiler, compiler->current, "Expected memory location name after #memalias directive.");
-
-
-}
-
+// Compile the next statement in the token array.
 static void statement(Compiler* compiler)
 {
 	const Token* nextToken = peek(compiler);
 	advance(compiler);
 
-	if (!isStatementStarter(nextToken->type))
+	if (!isStatementStarterType(nextToken->type))
 		return errorAt(compiler, compiler->current - 1, "Expected instruction mnemonic or label "
 			"declaration at beginning of statement.");
 
@@ -472,14 +504,14 @@ static void statement(Compiler* compiler)
 		return dataFromDirective(compiler);
 	if (nextToken->type == TOKEN_DATATO)
 		return dataToDirective(compiler);
-	if (nextToken->type == TOKEN_MEMALIAS)
-		return memAliasDirective(compiler);
 
 	if (nextToken->type == TOKEN_LABEL_DECL)
 	{
 		compiler->jumpTable[compiler->labelDeclsSeen++] = compiler->bytecode->count;
 		return;
 	}
+
+	// Else, instruction mnemonic.
 
 	compiler->currentInstruction = nextToken;
 	compiler->operandCount = 0;
@@ -500,22 +532,23 @@ static void printLabelDecls(const Compiler* compiler, const int labelsSeen)
 #endif
 
 #ifdef DEBUG_PRINT
-static void printMemNames(const Compiler* compiler)
+static void printMemAliases(const Compiler* compiler)
 {
-	printf("\n=== NAMED RAM ADDRESSES ===\n");
-	printf("Address | Address name\n");
+	printf("\n=== ALIASED RAM ADDRESSES ===\n");
+	printf("Address | Address alias\n");
 	printf("-----------------------\n");
 
 	for (int i = 0; i < 256; ++i)
 	{
-		if (compiler->memNames[i] == NULL)
+		if (compiler->memAliases[i] == NULL)
 			continue;
 
-		printf("0x%02x    | '%.*s'\n", i, compiler->memNameLengths[i], compiler->memNames[i]);
+		printf("0x%02x    | '%.*s'\n", i, compiler->memAliasLengths[i], compiler->memAliases[i]);
 	}
 }
 #endif
 
+// Compile source code into bytecode.
 bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source)
 {
 	Scanner scanner;
@@ -529,7 +562,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	for (int i = 0; i < 256; ++i)
 		compiler.labelNames[i] = NULL;
 	for (int i = 0; i < 256; ++i)
-		compiler.memNames[i] = NULL;
+		compiler.memAliases[i] = NULL;
 	compiler.panicMode = false;
 	compiler.hadError = false;
 	compiler.labelDeclsSeen = 0;
@@ -544,7 +577,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	{
 		const Token token = scanner.tokenArray.tokens[i];
 
-		if (!isTokenType(&token, TOKEN_LABEL_DECL))
+		if (token.type != TOKEN_LABEL_DECL)
 			continue;
 		if (labelsSeen == 256)
 		{
@@ -558,61 +591,51 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 		compiler.labelLengths[labelsSeen++] = token.length;
 	}
 
+	// Aliased RAM locations pass.
+#ifdef DEBUG_PRINT
 	bool memAliasSeen = false;
+#endif
 
-	// Named RAM locations pass.
 	for (size_t i = 0; i < scanner.tokenArray.count; ++i)
 	{
 		Token* directiveToken = &scanner.tokenArray.tokens[i];
 
-		if (!isTokenType(directiveToken, TOKEN_MEMALIAS))
+		if (directiveToken->type != TOKEN_MEMALIAS)
 			continue;
 
+#ifdef DEBUG_PRINT
 		memAliasSeen = true;
+#endif
 
 		if (scanner.tokenArray.count - 1 - i < 2)
 		{
-			errorAt(&compiler, directiveToken, "Expected memory index and name after #memalias directive. "
+			errorAt(&compiler, directiveToken, "Expected memory name and address after #memalias directive. "
 				"Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
-		if (!isTokenType(&directiveToken[1], TOKEN_MEMORY))
+		if (directiveToken[1].type != TOKEN_MEMORY_ALIAS)
 		{
-			errorAt(&compiler, &directiveToken[1], "Expected memory name and index after #memalias directive. "
+			errorAt(&compiler, &directiveToken[1], "Expected memory name and address after #memalias directive. "
 				"Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
-		if (!isAlpha(directiveToken[1].start[0]))
+		if (directiveToken[2].type != TOKEN_MEMORY)
 		{
-			errorAt(&compiler, &directiveToken[1], "Expected memory name in #memalias directive to be an "
-				"identifier. Compilation aborted.");
-			freeScanner(&scanner);
-			return false;
-		}
-		if (!isTokenType(&directiveToken[2], TOKEN_MEMORY))
-		{
-			errorAt(&compiler, &directiveToken[2], "Expected memory name and index after #memalias directive. "
+			errorAt(&compiler, &directiveToken[2], "Expected memory name and address after #memalias directive. "
 				"Compilation aborted.");
 			freeScanner(&scanner);
 			return false;
 		}
-		if (!isDigit(directiveToken[2].start[0], BASE_DECIMAL))
-		{
-			errorAt(&compiler, &directiveToken[2], "Expected memory index in #memalias directive to be a "
-				"number. Compilation aborted.");
-			freeScanner(&scanner);
-			return false;
-		}
 
-		const uint8_t memIndex = parseNumberOperand(&compiler, &directiveToken[2]);
+		const uint8_t memAddress = parseNumberOperand(&compiler, &directiveToken[2]);
 
-		if (compiler.memNames[memIndex] != NULL)
-			warningAt(&compiler, directiveToken, "Renaming ");
+		if (compiler.memAliases[memAddress] != NULL)
+			warningAt(&compiler, directiveToken, "Re-aliasing already aliased RAM address.");
 
-		compiler.memNames[memIndex] = directiveToken[1].start;
-		compiler.memNameLengths[memIndex] = directiveToken[1].length;
+		compiler.memAliases[memAddress] = directiveToken[1].start;
+		compiler.memAliasLengths[memAddress] = directiveToken[1].length;
 
 		const Token skipToken = {NULL, TOKEN_SKIP, 0, 0};
 		directiveToken[0] = skipToken;
@@ -624,7 +647,7 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	if (labelsSeen > 0)
 		printLabelDecls(&compiler, labelsSeen);
 	if (memAliasSeen)
-		printMemNames(&compiler);
+		printMemAliases(&compiler);
 #endif
 
 #ifdef DEBUG_PRINT
@@ -633,12 +656,12 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	printf("------------------------------\n");
 #endif
 
-	if (isTokenType(peek(&compiler), TOKEN_ERROR))
+	if (peek(&compiler)->type == TOKEN_ERROR)
 		errorAt(&compiler, peek(&compiler), peek(&compiler)->start);
 
-	while (!isTokenType(peek(&compiler), TOKEN_EOF))
+	while (peek(&compiler)->type != TOKEN_EOF)
 	{
-		if (isTokenType(peek(&compiler), TOKEN_SKIP))
+		if (peek(&compiler)->type == TOKEN_SKIP)
 		{
 			advance(&compiler);
 			continue;

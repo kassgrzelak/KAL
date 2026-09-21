@@ -30,12 +30,12 @@ static void freeTokenArray(const TokenArray* array)
 	free(array->tokens);
 }
 
-bool isStatementStarter(const TokenType type)
+bool isStatementStarterType(const TokenType type)
 {
 	return type <= TOKEN_LABEL_DECL;
 }
 
-bool isOperand(const TokenType type)
+bool isOperandType(const TokenType type)
 {
 	return type >= TOKEN_CONSTANT && type <= TOKEN_LABEL_OPERAND;
 }
@@ -53,6 +53,14 @@ void freeScanner(const Scanner* scanner)
 {
 	freeTokenArray(&scanner->tokenArray);
 }
+
+typedef enum
+{
+	TOKENCAT_MNEMONIC, TOKENCAT_ASSEMBLER_DIR,
+	TOKENCAT_CONSTANT, TOKENCAT_STRING_CHAR, TOKENCAT_ALIAS_ADDRESS,
+	TOKENCAT_REGISTER, TOKENCAT_MEMORY, TOKENCAT_MEMORY_ALIAS,
+	TOKENCAT_POINTER, TOKENCAT_LABEL_OPERAND
+} TokenTypeCategory;
 
 #ifdef DEBUG_PRINT
 static void printToken(const TokenType type, const char* start, const int length, const int line)
@@ -78,9 +86,11 @@ static void printToken(const TokenType type, const char* start, const int length
 		TYPE_CASE(TOKEN_LABEL_DECL);
 
 		TYPE_CASE(TOKEN_CONSTANT);
-		TYPE_CASE(TOKEN_STRINGCHAR);
+		TYPE_CASE(TOKEN_STRING_CHAR);
+		TYPE_CASE(TOKEN_ALIAS_ADDRESS);
 		TYPE_CASE(TOKEN_REGISTER);
 		TYPE_CASE(TOKEN_MEMORY);
+		TYPE_CASE(TOKEN_MEMORY_ALIAS);
 		TYPE_CASE(TOKEN_POINTER);
 		TYPE_CASE(TOKEN_LABEL_OPERAND);
 
@@ -97,6 +107,7 @@ static void printToken(const TokenType type, const char* start, const int length
 }
 #endif
 
+// Make a token out of the characters the scanner has consumed.
 static Token makeToken(const Scanner* scanner, const TokenType type)
 {
 	Token token;
@@ -104,7 +115,7 @@ static Token makeToken(const Scanner* scanner, const TokenType type)
 	token.start = scanner->start;
 	token.length = (int)(scanner->current - scanner->start);
 	if (type == TOKEN_LABEL_DECL)
-		token.length -= 1;
+		token.length -= 1; // Don't include end colon in lexeme.
 	token.line = scanner->line;
 
 #ifdef DEBUG_PRINT
@@ -132,6 +143,7 @@ static Token errorToken(Scanner* scanner, const char* message)
 	return token;
 }
 
+// Create a token but don't advance the scanner. Use when it is not a token that causes the error but something else.
 static Token errorTokenNoAdvance(const Scanner* scanner, const char* message)
 {
 	Token token;
@@ -171,6 +183,11 @@ bool isDigit(const char c, const NumBase base)
 	return false;
 }
 
+bool isQuoteChar(const char c)
+{
+	return c == '\'' || c == '"';
+}
+
 static bool atEnd(const Scanner* scanner)
 {
 	return *scanner->current == '\0';
@@ -192,6 +209,7 @@ static char peek(const Scanner* scanner)
 	return *scanner->current;
 }
 
+// Skip whitespace, if any. Returns true if whitespace was skipped and false if no whitespace was encountered.
 static bool skipWhitespace(Scanner* scanner)
 {
 	bool whitespaceSeen = false;
@@ -236,6 +254,7 @@ static Token mnemonic(Scanner* scanner)
 {
 	const size_t length = scanner->current - scanner->start;
 
+	// Search instruction table for a mnemonic matching the one consumed.
 	for (int i = 0; i < INSTR_COUNT; ++i)
 	{
 		const char* mnemonic = instrTable[i].mnemonic;
@@ -258,6 +277,7 @@ static Token assemblerDirective(Scanner* scanner)
 {
 	const size_t length = scanner->current - scanner->start;
 
+	// Search assembler directive table for a directive matching the one consumed.
 	for (int i = 0; i < ASSEMBLER_DIRECTIVE_COUNT; ++i)
 	{
 		const char* mnemonic = assemblerDirectives[i].mnemonic;
@@ -276,19 +296,18 @@ static Token assemblerDirective(Scanner* scanner)
 	return errorToken(scanner, "Unknown assembler directive.");
 }
 
-static Token identifier(Scanner* scanner, const bool isLabelOperand, const bool isNamedMemDecl,
-	const bool isNamedMemAddr, const bool isAssemblerDirective)
+static Token identifier(Scanner* scanner, const TokenTypeCategory tokenCat)
 {
 	while (isAlpha(peek(scanner)) || isDigit(peek(scanner), BASE_DECIMAL))
 		advance(scanner);
 
-	if (isLabelOperand)
+	if (tokenCat == TOKENCAT_LABEL_OPERAND)
 		return makeToken(scanner, TOKEN_LABEL_OPERAND);
-	if (isNamedMemDecl)
-		return makeToken(scanner, TOKEN_MEMORY);
-	if (isNamedMemAddr)
-		return makeToken(scanner, TOKEN_CONSTANT);
-	if (isAssemblerDirective)
+	if (tokenCat == TOKENCAT_MEMORY_ALIAS)
+		return makeToken(scanner, TOKEN_MEMORY_ALIAS);
+	if (tokenCat == TOKENCAT_ALIAS_ADDRESS)
+		return makeToken(scanner, TOKEN_ALIAS_ADDRESS);
+	if (tokenCat == TOKENCAT_ASSEMBLER_DIR)
 		return assemblerDirective(scanner);
 
 	if (peek(scanner) == ':')
@@ -302,7 +321,7 @@ static Token identifier(Scanner* scanner, const bool isLabelOperand, const bool 
 
 static Token number(Scanner* scanner, const TokenType type)
 {
-	if (type == TOKEN_REGISTER && peek(scanner) >= 'a' && peek(scanner) <= 'h')
+	if ((type == TOKEN_REGISTER || type == TOKEN_POINTER) && peek(scanner) >= 'a' && peek(scanner) <= 'h')
 	{
 		// Convert letters a-h to numbers 0-7.
 		const int registerNum = peek(scanner) - 'a';
@@ -367,8 +386,12 @@ static Token number(Scanner* scanner, const TokenType type)
 
 static Token stringChar(Scanner* scanner)
 {
+	// If backslash character encountered, consume one more character to get escape sequence.
+	if (peek(scanner) == '\\')
+		advance(scanner);
+
 	advance(scanner);
-	return makeToken(scanner, TOKEN_STRINGCHAR);
+	return makeToken(scanner, TOKEN_STRING_CHAR);
 }
 
 static Token scanToken(Scanner* scanner)
@@ -378,28 +401,27 @@ static Token scanToken(Scanner* scanner)
 
 	const char c = peek(scanner);
 
-	if (c != '"' && scanner->readingString)
+	if (scanner->readingString && c != scanner->currentQuoteChar)
 	{
 		return stringChar(scanner);
 	}
-
-	if (c == '"' && scanner->readingString)
+	if (scanner->readingString && c == scanner->currentQuoteChar)
 	{
 		skip(scanner);
 		scanner->readingString = false;
 		const Token skipToken = {NULL, TOKEN_SKIP, 0, 0};
 		return skipToken;
 	}
-
-	if (c == '"')
+	if (isQuoteChar(c))
 	{
 		skip(scanner);
 		scanner->readingString = true; // Must be false at this point in the code due to above ifs.
+		scanner->currentQuoteChar = c;
 		return stringChar(scanner);
 	}
 
 	if (isAlpha(c))
-		return identifier(scanner, false, false, false, false);
+		return identifier(scanner, TOKENCAT_MNEMONIC); // May return TOKEN_LABEL_DECL too, not just mnemonic.
 	if (isDigit(c, BASE_DECIMAL))
 		return number(scanner, TOKEN_CONSTANT);
 	if (c == '%')
@@ -413,7 +435,7 @@ static Token scanToken(Scanner* scanner)
 
 		if (isDigit(peek(scanner), BASE_DECIMAL))
 			return number(scanner, TOKEN_MEMORY);
-		return identifier(scanner, false, true, false, false);
+		return identifier(scanner, TOKENCAT_MEMORY_ALIAS);
 	}
 	if (c == '*')
 	{
@@ -427,7 +449,7 @@ static Token scanToken(Scanner* scanner)
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected label name after label operator.");
 
-		return identifier(scanner, true, false, false, false);
+		return identifier(scanner, TOKENCAT_LABEL_OPERAND);
 	}
 	if (c == '#')
 	{
@@ -436,16 +458,16 @@ static Token scanToken(Scanner* scanner)
 		if (!isAlpha(peek(scanner)))
 			return errorToken(scanner, "Expected assembler directive after assembler directive operator.");
 
-		return identifier(scanner, false, false, false, true);
+		return identifier(scanner, TOKENCAT_ASSEMBLER_DIR);
 	}
 	if (c == '&')
 	{
 		skip(scanner);
 
 		if (!isAlpha(peek(scanner)))
-			return errorToken(scanner, "Expected named RAM identifier after named RAM address operator.");
+			return errorToken(scanner, "Expected aliased RAM identifier after aliased RAM address operator.");
 
-		return identifier(scanner, false, false, true, false);
+		return identifier(scanner, TOKENCAT_ALIAS_ADDRESS);
 	}
 
 	return errorToken(scanner, "Unexpected character.");
@@ -470,7 +492,7 @@ void tokenize(Scanner* scanner)
 		{
 			if (scanner->readingString)
 				writeTokenArray(&scanner->tokenArray, errorTokenNoAdvance(scanner, "End of file reached before"
-					" closing double quote of string."));
+					" closing quote of string."));
 			
 			writeTokenArray(&scanner->tokenArray, token);
 			break;
@@ -486,7 +508,7 @@ void tokenize(Scanner* scanner)
 
 		if (!skipWhitespace(scanner))
 			writeTokenArray(&scanner->tokenArray, errorTokenNoAdvance(scanner, "Expected whitespace before "
-				"next token. This was likely caused by a malformed integer literal."));
+				"next token."));
 
 		scanner->start = scanner->current;
 	}
