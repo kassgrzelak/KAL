@@ -33,7 +33,6 @@ typedef enum
 typedef struct
 {
 	uint8_t opcode;
-	uint8_t length;
 	uint16_t signature;
 } InstrVariant;
 
