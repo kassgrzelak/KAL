@@ -12,10 +12,6 @@
 void initVM(VM* vm)
 {
 	initBytecode(&vm->bytecode);
-	for (int i = 0; i < 8; ++i)
-		vm->registers[i] = 0;
-	for (int i = 0; i < 256; ++i)
-		vm->ram[i] = 0;
 	vm->callDepth = 0;
 }
 
