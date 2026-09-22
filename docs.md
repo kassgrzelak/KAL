@@ -45,7 +45,7 @@ register zero. ; mv $0 %0
 ```
 `register zero. ` will be read as code and `mv $0 %0` will be read as a comment.
 
-## Numbers
+## Operand Types
 
 ### Constants
 Constants are written as just plain numbers, with no special operator denoting them. They are parsed as decimal numbers
@@ -57,6 +57,25 @@ out 0123   ; Octal.
 out 123    ; Decimal.
 out 0xcf   ; Hexadecimal.
 ```
+
+#### Strings
+KAL supports string constants. These are exactly equivalent to just writing out a list of the ASCII values for each 
+character.
+```
+"hello" ; Is exactly the same as just putting:
+104 101 108 108 111 ; in your code.
+```
+You can use either the double quote (`"`) or single quote (`'`) character to denote a string constant. The convention is
+to use single quotes for single character literals (e.g. `'c'`) and double quotes for full strings, but this is not
+enforced.
+
+You can use a backslash (`\`) to denote an ASCII escape code. This can be used to have hard-to-type characters in your
+code using familiar names, such as `\n`. KAL only supports single-character escape codes. If there is no ASCII escape
+code for the character following the backslash character, or KAL does not support that escape code, it will be 
+equivalent to just typing that character without the backslash.
+
+Note that, unlike C/C++, the null character is not added for you at the end of string literals. If you want it, add `\0`
+to the end of your string.
 
 ### Registers
 There are eight 8-bit registers in the virtual CPU used by KAL. The values in a register are referred to by the register
@@ -116,7 +135,6 @@ the address specified. For example:
 1 2 3 4
 ```
 RAM address 10 will contain the number 1, address 11 will contain the number 2, and so on.
-
 ```
 RAM Address:   | 10 | 11 | 12 | 13 |
 Stored Number: |  1 |  2 |  3 |  4 |
@@ -129,7 +147,6 @@ including* the given address. For example:
 1 2 3 4
 ```
 So, RAM address 255 will contain the number 4, address 254 will contain 3, and so on.
-
 ```
 RAM Address:   | 252 | 253 | 254 | 255 |
 Stored Number: |   1 |   2 |   3 |   4 |
@@ -138,33 +155,22 @@ Stored Number: |   1 |   2 |   3 |   4 |
 ### #memalias 
 You can use the #memalias directive to name any RAM address with a memorable string identifier, which can then be used
 anywhere a RAM address is expected. Here is an example:
-
 ```
 #memalias $my_number $0
 
 mv $my_number 10
 out $my_number
 ```
-
 This program creates an alias for RAM address 0 called `my_number`, uses it to move the value of 10 into it, then
 prints it to the screen. Note that you still must prepend the name with the RAM operator (`$`).
 
 Because the #memalias directive is dealt with in a separate pass before any instruction statements are compiled, a RAM
 alias doesn't even have to be defined above where it's used in the program, making this a completely valid KAL program:
-
 ```
 mv $my_number 10
 out $my_number
 
 #memalias $my_number $0
-```
-
-You can combine this directive with #datafrom directive to create arrays with identifiers in your code.
-
-```
-#memalias $my_numbers $100
-#datafrom $100
-1 2 3 4
 ```
 
 #### Aliased RAM Address Operator
@@ -172,19 +178,22 @@ However, it would be nice to be able to recover the actual address the identifie
 handy identifier. This is what the aliased RAM address operator (`&`) is for.
 
 When followed by an aliased RAM address identifier, it evaluates to the numerical address that identifier is aliased to.
-
 ```
 #memalias $named_location $10
 mv %0 &named_location ; Register 0 will now contain the number 10.
 ```
-
 Note how the second line is different to:
-
 ```
 mv %0 $named_location
 ```
-
 As this instruction would move whatever value is in RAM address 10 into register 0.
+
+You can combine this with the #memalias and #datafrom directives to easily create named arrays in your code.
+```
+#memalias $my_text $100
+#datafrom &my_text
+"hello!\0"
+```
 
 Note that the result of this operator is a constant value and will be treated as such in the operands to any instruction
 or assembler directive.
