@@ -1,6 +1,6 @@
 #memalias $string $0
 #memalias $welcome_string $100
-#datafrom $welcome_string "Type something: "
+#datafrom $welcome_string "Type something: \0"
 
 start:
 	; Print welcome string.
