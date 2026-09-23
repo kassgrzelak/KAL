@@ -31,6 +31,7 @@ typedef enum
 void initVM(VM* vm);
 void freeVM(const VM* vm);
 
+InterpretResult run(VM* vm);
 InterpretResult interpret(VM* vm, const char* source);
 
 #endif //KAL_VM_H

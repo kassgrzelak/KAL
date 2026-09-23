@@ -42,7 +42,7 @@ static VMHandler vmHandlerTable[OPCODE_COUNT] = {
 #undef X
 };
 
-static InterpretResult run(VM* vm)
+InterpretResult run(VM* vm)
 {
 	for (uint8_t opcode = *vm->ip++; opcode != OP_HLT; opcode = *vm->ip++)
 	{
