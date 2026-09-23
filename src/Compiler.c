@@ -548,57 +548,64 @@ static void printMemAliases(const Compiler* compiler)
 }
 #endif
 
-// Compile source code into bytecode.
-bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source)
+static void initCompiler(Compiler* compiler, const Scanner* scanner,
+	Bytecode* bytecode, size_t* jumpTable, uint8_t* ram)
 {
-	Scanner scanner;
-	initScanner(&scanner, source);
-	tokenize(&scanner);
+	compiler->bytecode = bytecode;
+	compiler->ram = ram;
+	compiler->jumpTable = jumpTable;
 
-	Compiler compiler;
-	compiler.bytecode = bytecode;
-	compiler.ram = ram;
-	compiler.jumpTable = jumpTable;
 	for (int i = 0; i < 256; ++i)
-		compiler.labelNames[i] = NULL;
+		compiler->labelNames[i] = NULL;
 	for (int i = 0; i < 256; ++i)
-		compiler.memAliases[i] = NULL;
-	compiler.panicMode = false;
-	compiler.hadError = false;
-	compiler.labelDeclsSeen = 0;
-	compiler.currentInstruction = NULL;
-	compiler.operandCount = 0;
-	compiler.current = scanner.tokenArray.tokens;
+		compiler->memAliases[i] = NULL;
 
-	// Label declaration pass.
+	compiler->panicMode = false;
+	compiler->hadError = false;
+	compiler->labelDeclsSeen = 0;
+	compiler->currentInstruction = NULL;
+	compiler->operandCount = 0;
+	compiler->current = scanner->tokenArray.tokens;
+}
+
+static bool labelDeclPass(Compiler* compiler, const Scanner* scanner)
+{
 	int labelsSeen = 0;
 
-	for (size_t i = 0; i < scanner.tokenArray.count; ++i)
+	for (size_t i = 0; i < scanner->tokenArray.count; ++i)
 	{
-		const Token token = scanner.tokenArray.tokens[i];
+		const Token token = scanner->tokenArray.tokens[i];
 
 		if (token.type != TOKEN_LABEL_DECL)
 			continue;
 		if (labelsSeen == 256)
 		{
-			errorAt(&compiler, &token, "Exceeded the limit of 256 labels in a single program. Compilation "
+			errorAt(compiler, &token, "Exceeded the limit of 256 labels in a single program. Compilation "
 				"aborted.");
-			freeScanner(&scanner);
 			return false;
 		}
 
-		compiler.labelNames[labelsSeen] = token.start;
-		compiler.labelLengths[labelsSeen++] = token.length;
+		compiler->labelNames[labelsSeen] = token.start;
+		compiler->labelLengths[labelsSeen++] = token.length;
 	}
 
-	// Aliased RAM locations pass.
+#ifdef DEBUG_PRINT
+	if (labelsSeen > 0)
+		printLabelDecls(compiler, labelsSeen);
+#endif
+
+	return true;
+}
+
+static bool memAliasPass(Compiler* compiler, Scanner* scanner)
+{
 #ifdef DEBUG_PRINT
 	bool memAliasSeen = false;
 #endif
 
-	for (size_t i = 0; i < scanner.tokenArray.count; ++i)
+	for (size_t i = 0; i < scanner->tokenArray.count; ++i)
 	{
-		Token* directiveToken = &scanner.tokenArray.tokens[i];
+		Token* directiveToken = &scanner->tokenArray.tokens[i];
 
 		if (directiveToken->type != TOKEN_MEMALIAS)
 			continue;
@@ -607,35 +614,32 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 		memAliasSeen = true;
 #endif
 
-		if (scanner.tokenArray.count - 1 - i < 2)
+		if (scanner->tokenArray.count - 1 - i < 2)
 		{
-			errorAt(&compiler, directiveToken, "Expected memory name and address after #memalias directive. "
+			errorAt(compiler, directiveToken, "Expected memory name and address after #memalias directive. "
 				"Compilation aborted.");
-			freeScanner(&scanner);
 			return false;
 		}
 		if (directiveToken[1].type != TOKEN_MEMORY_ALIAS)
 		{
-			errorAt(&compiler, &directiveToken[1], "Expected memory name and address after #memalias directive. "
+			errorAt(compiler, &directiveToken[1], "Expected memory name and address after #memalias directive. "
 				"Compilation aborted.");
-			freeScanner(&scanner);
 			return false;
 		}
 		if (directiveToken[2].type != TOKEN_MEMORY)
 		{
-			errorAt(&compiler, &directiveToken[2], "Expected memory name and address after #memalias directive. "
+			errorAt(compiler, &directiveToken[2], "Expected memory name and address after #memalias directive. "
 				"Compilation aborted.");
-			freeScanner(&scanner);
 			return false;
 		}
 
-		const uint8_t memAddress = parseNumberOperand(&compiler, &directiveToken[2]);
+		const uint8_t memAddress = parseNumberOperand(compiler, &directiveToken[2]);
 
-		if (compiler.memAliases[memAddress] != NULL)
-			warningAt(&compiler, directiveToken, "Re-aliasing already aliased RAM address.");
+		if (compiler->memAliases[memAddress] != NULL)
+			warningAt(compiler, directiveToken, "Re-aliasing already aliased RAM address.");
 
-		compiler.memAliases[memAddress] = directiveToken[1].start;
-		compiler.memAliasLengths[memAddress] = directiveToken[1].length;
+		compiler->memAliases[memAddress] = directiveToken[1].start;
+		compiler->memAliasLengths[memAddress] = directiveToken[1].length;
 
 		const Token skipToken = {NULL, TOKEN_SKIP, 0, 0};
 		directiveToken[0] = skipToken;
@@ -644,11 +648,33 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	}
 
 #ifdef DEBUG_PRINT
-	if (labelsSeen > 0)
-		printLabelDecls(&compiler, labelsSeen);
 	if (memAliasSeen)
-		printMemAliases(&compiler);
+		printMemAliases(compiler);
 #endif
+
+	return true;
+}
+
+// Compile source code into bytecode.
+bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source)
+{
+	Scanner scanner;
+	initScanner(&scanner, source);
+	tokenize(&scanner);
+
+	Compiler compiler;
+	initCompiler(&compiler, &scanner, bytecode, jumpTable, ram);
+
+	if (!labelDeclPass(&compiler, &scanner))
+	{
+		freeScanner(&scanner);
+		return false;
+	}
+	if (!memAliasPass(&compiler, &scanner))
+	{
+		freeScanner(&scanner);
+		return false;
+	}
 
 #ifdef DEBUG_PRINT
 	printf("\n=== BYTECODE ===\n");
