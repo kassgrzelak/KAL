@@ -143,6 +143,9 @@ static int outputBytecode(const char* sourcePath, const char* outputPath)
 
 	fclose(outputFile);
 
+	printf("Success. Wrote %llu byte bytecode file.",
+		sizeof(jumpTable) + sizeof(ram) + bytecode.count * sizeof(uint8_t));
+
 	freeBytecode(&bytecode);
 	free(source);
 	return 0;
