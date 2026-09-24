@@ -9,7 +9,8 @@
     "language":
     {
       "patterns": [{"include": "#mnemonic"}, {"include": "#directive"}, {"include":  "#comment"},
-        {"include":  "#string"}, {"include":  "#constant"}, {"include":  "#register"}, {"include":  "#memory"}, {"include":  "#pointer"}]
+        {"include":  "#string"}, {"include":  "#constant"}, {"include":  "#register"}, {"include":  "#memory"},
+        {"include":  "#pointer"}]
     },
 
     "mnemonic":
