@@ -19,7 +19,7 @@ add_executable(kal main.c
         include/opcodes.h
         include/mnemonicTokens.h
         include/vmHandlers.h
-        include/assemblerDirectives.hpp
+        include/assemblerDirectives.h
         include/input.h
         src/input.c
 )

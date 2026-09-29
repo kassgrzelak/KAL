@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "assemblerDirectives.hpp"
+#include "assemblerDirectives.h"
 #include "instructions.h"
 #include "memory.h"
 
