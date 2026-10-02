@@ -10,7 +10,7 @@
     {
       "patterns": [{"include": "#mnemonic"}, {"include": "#directive"}, {"include":  "#comment"},
         {"include":  "#string"}, {"include":  "#constant"}, {"include":  "#register"}, {"include":  "#memory"},
-        {"include":  "#pointer"}]
+        {"include":  "#pointer"}, {"include": "#macro-replacement"}]
     },
 
     "mnemonic":
@@ -22,7 +22,7 @@
     "directive":
     {
       "name": "keyword.control.directive.kal",
-      "match": "(?i)#datafrom\\b|#datato\\b|#memalias\\b"
+      "match": "(?i)#datafrom\\b|#datato\\b|#memalias\\b|#macro\\b|#unmacro\\b"
     },
 
     "comment":
@@ -42,6 +42,13 @@
           "match": "\\\\."
         }
       ]
+    },
+
+    "macro-replacement":
+    {
+      "name": "keyword.control.macro-replacement.kal",
+      "begin": "`",
+      "end": "`"
     },
 
     "constant":

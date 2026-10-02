@@ -22,6 +22,11 @@ add_executable(kal main.c
         include/assemblerDirectives.h
         include/input.h
         src/input.c
+        include/PreprocScanner.h
+        src/PreprocScanner.c
+        include/preprocDirectives.h
+        include/Preprocessor.h
+        src/Preprocessor.c
 )
 
 target_include_directories(kal PRIVATE
