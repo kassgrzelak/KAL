@@ -22,7 +22,7 @@
     "directive":
     {
       "name": "keyword.control.directive.kal",
-      "match": "(?i)#datafrom\\b|#datato\\b|#memalias\\b|#macro\\b|#unmacro\\b"
+      "match": "(?i)#datafrom\\b|#datato\\b|#macro\\b|#unmacro\\b"
     },
 
     "comment":

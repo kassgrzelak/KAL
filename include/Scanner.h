@@ -16,15 +16,15 @@ typedef enum
 #undef X
 
 	// Assembler directives.
-	TOKEN_DATAFROM, TOKEN_DATATO, TOKEN_MEMALIAS,
+	TOKEN_DATAFROM, TOKEN_DATATO,
 
 	// Label declaration.
 	TOKEN_LABEL_DECL,
 
 	// Operand types. All operand types MUST be in a contiguous range.
-	TOKEN_CONSTANT, TOKEN_STRING_CHAR, TOKEN_ALIAS_ADDRESS, // All effectively constants.
+	TOKEN_CONSTANT, TOKEN_STRING_CHAR,
 	TOKEN_REGISTER,
-	TOKEN_MEMORY, TOKEN_MEMORY_ALIAS, // All effectively RAM addresses.
+	TOKEN_MEMORY,
 	TOKEN_POINTER,
 	TOKEN_LABEL_OPERAND,
 

@@ -14,12 +14,10 @@ AddressingMode tokenTypeToAddressingMode(const TokenType type)
 	switch (type) {
 	case TOKEN_CONSTANT:
 	case TOKEN_STRING_CHAR:
-	case TOKEN_ALIAS_ADDRESS:
 		return AM_CONST;
 	case TOKEN_REGISTER:
 		return AM_REG;
 	case TOKEN_MEMORY:
-	case TOKEN_MEMORY_ALIAS:
 		return AM_MEM;
 	case TOKEN_POINTER:
 		return AM_PTR;
@@ -79,9 +77,6 @@ typedef struct
 	const char* labelNames[256];
 	int labelLengths[256];
 
-	const char* memAliases[256];
-	int memAliasLengths[256];
-
 	bool panicMode;
 	bool hadError;
 
@@ -100,12 +95,10 @@ static bool isAddressingModeType(const Token* token, const AddressingMode operan
 	{
 	case TOKEN_CONSTANT:
 	case TOKEN_STRING_CHAR:
-	case TOKEN_ALIAS_ADDRESS:
 		return operandType == AM_CONST;
 	case TOKEN_REGISTER:
 		return operandType == AM_REG;
 	case TOKEN_MEMORY:
-	case TOKEN_MEMORY_ALIAS:
 		return operandType == AM_MEM;
 	case TOKEN_POINTER:
 		return operandType == AM_PTR;
@@ -297,35 +290,13 @@ static uint8_t parseConstant(Compiler* compiler, const Token* token)
 	if (token->type == TOKEN_STRING_CHAR)
 		return parseStringChar(compiler, token);
 
-	if (token->type == TOKEN_CONSTANT)
-		return parseNumberOperand(compiler, token);
-
-	// Else alias address.
-
-	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token->start, token->length);
-	if (memIndex != -1)
-		return memIndex;
-
-	errorAt(compiler, token, "Aliased RAM location name does not match any name given in any #memalias directive"
-		" in the program.");
-	return 0;
+	return parseNumberOperand(compiler, token);
 }
 
 // Parse a RAM operand and return the numerical address it refers to.
 static uint8_t parseMemoryOperand(Compiler* compiler, const Token* token)
 {
-	if (token->type == TOKEN_MEMORY)
-		return parseNumberOperand(compiler, token);
-
-	// Else aliased mem address.
-
-	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token->start, token->length);
-	if (memIndex != -1)
-		return memIndex;
-
-	errorAt(compiler, token, "Aliased RAM location name does not match any name given in any #memalias directive"
-		" in the program.");
-	return 0;
+	return parseNumberOperand(compiler, token);
 }
 
 // Parse an operand and return its numerical value.
@@ -531,23 +502,6 @@ static void printLabelDecls(const Compiler* compiler, const int labelsSeen)
 }
 #endif
 
-#ifdef DEBUG_PRINT
-static void printMemAliases(const Compiler* compiler)
-{
-	printf("\n=== ALIASED RAM ADDRESSES ===\n");
-	printf("Address | Address alias\n");
-	printf("-----------------------\n");
-
-	for (int i = 0; i < 256; ++i)
-	{
-		if (compiler->memAliases[i] == NULL)
-			continue;
-
-		printf("0x%02x    | '%.*s'\n", i, compiler->memAliasLengths[i], compiler->memAliases[i]);
-	}
-}
-#endif
-
 static void initCompiler(Compiler* compiler, const Scanner* scanner,
 	Bytecode* bytecode, size_t* jumpTable, uint8_t* ram)
 {
@@ -557,9 +511,6 @@ static void initCompiler(Compiler* compiler, const Scanner* scanner,
 
 	for (int i = 0; i < 256; ++i)
 		compiler->labelNames[i] = NULL;
-	for (int i = 0; i < 256; ++i)
-		compiler->memAliases[i] = NULL;
-
 	compiler->panicMode = false;
 	compiler->hadError = false;
 	compiler->labelDeclsSeen = 0;
@@ -597,64 +548,6 @@ static bool labelDeclPass(Compiler* compiler, const Scanner* scanner)
 	return true;
 }
 
-static bool memAliasPass(Compiler* compiler, const Scanner* scanner)
-{
-#ifdef DEBUG_PRINT
-	bool memAliasSeen = false;
-#endif
-
-	for (size_t i = 0; i < scanner->tokenArray.count; ++i)
-	{
-		Token* directiveToken = &scanner->tokenArray.tokens[i];
-
-		if (directiveToken->type != TOKEN_MEMALIAS)
-			continue;
-
-#ifdef DEBUG_PRINT
-		memAliasSeen = true;
-#endif
-
-		if (scanner->tokenArray.count - 1 - i < 2)
-		{
-			errorAt(compiler, directiveToken, "Expected memory name and address after #memalias directive. "
-				"Compilation aborted.");
-			return false;
-		}
-		if (directiveToken[1].type != TOKEN_MEMORY_ALIAS)
-		{
-			errorAt(compiler, &directiveToken[1], "Expected memory name and address after #memalias directive. "
-				"Compilation aborted.");
-			return false;
-		}
-		if (directiveToken[2].type != TOKEN_MEMORY)
-		{
-			errorAt(compiler, &directiveToken[2], "Expected memory name and address after #memalias directive. "
-				"Compilation aborted.");
-			return false;
-		}
-
-		const uint8_t memAddress = parseNumberOperand(compiler, &directiveToken[2]);
-
-		if (compiler->memAliases[memAddress] != NULL)
-			warningAt(compiler, directiveToken, "Re-aliasing already aliased RAM address.");
-
-		compiler->memAliases[memAddress] = directiveToken[1].start;
-		compiler->memAliasLengths[memAddress] = directiveToken[1].length;
-
-		const Token skipToken = {NULL, TOKEN_SKIP, 0, 0};
-		directiveToken[0] = skipToken;
-		directiveToken[1] = skipToken;
-		directiveToken[2] = skipToken;
-	}
-
-#ifdef DEBUG_PRINT
-	if (memAliasSeen)
-		printMemAliases(compiler);
-#endif
-
-	return true;
-}
-
 // Compile source code into bytecode.
 bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source)
 {
@@ -666,11 +559,6 @@ bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* so
 	initCompiler(&compiler, &scanner, bytecode, jumpTable, ram);
 
 	if (!labelDeclPass(&compiler, &scanner))
-	{
-		freeScanner(&scanner);
-		return false;
-	}
-	if (!memAliasPass(&compiler, &scanner))
 	{
 		freeScanner(&scanner);
 		return false;

@@ -1,13 +1,13 @@
-#memalias $string $0
-#memalias $welcome_string $100
-#datafrom $welcome_string "Type something: \0"
+#macro USER_STRING `0`
+#macro WELCOME_STRING `100`
+#datafrom $WELCOME_STRING "Type something: \0"
 
 start:
 	; Print welcome string.
-	mv %0 &welcome_string
+	mv %0 WELCOME_STRING
 	call .print_string
 
-	mv %0 &string
+	mv %0 USER_STRING
 
 	typing_loop:
 		getc %1
@@ -26,7 +26,7 @@ start:
 	done_typing:
 	; Add null-termination and reset pointer to beginning of string, then print.
 	mv *0 0
-	mv %0 &string
+	mv %0 USER_STRING
 	call .print_string
 	hlt
 

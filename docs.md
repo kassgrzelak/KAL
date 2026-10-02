@@ -121,6 +121,46 @@ jmp .start ; Output 0 infinitely.
 
 Label identifiers must be exclusively alphanumeric, and you may not have more than 256 of them in a program.
 
+## The Preprocessor
+The preprocessor runs before the program is compiled and allows you to define identifiers that will be replaced with 
+other text. Preprocessor directives are indicated by a hashtag (`#`).
+
+### #macro
+The #macro directive defines a macro by giving its alphanumeric identifier followed by the text that should replace it, 
+surrounded by backticks (`).
+```
+#macro EXAMPLE_MACRO `42`
+out EXAMPLE_MACRO ; Outputs 42.
+```
+
+Macros are replaced wherever their name appears as an alphanumeric identifier. Macro names are case-insensitive, though 
+it is convention to have macro identifiers in all-uppercase, and a macro may be used in the replacement text of another 
+macro.
+```
+#macro EXAMPLE_MACRO `out 10`
+#macro DOUBLED `EXAMPLE_MACRO EXAMPLE_MACRO`
+DOUBLED ; Outputs 10 10.
+```
+
+The preprocessor repeats macro replacement until no more replacements can be made. It allows up to 256 macros in one
+program and up to 64 preprocessing rounds.
+
+### #unmacro
+The #unmacro directive undefines a previously defined macro. Appearances of this macro will not replaced after this 
+directive.
+```
+#macro VALUE `10`
+out VALUE ; Outputs 10.
+#unmacro VALUE
+#macro VALUE `20`
+out VALUE ; Outputs 20.
+```
+
+After a macro is undefined, text with its name is left unchanged until it is defined again. It is an error to try to 
+remove a macro that has not been defined.
+
+Note that undefining a macro does not remove from the 256 macro limit.
+
 ## Assembler Directives
 Assembler directives are indicated by a hashtag (`#`) and do not translate to any instructions in the compiled code,
 but rather perform other tasks.
@@ -152,48 +192,12 @@ RAM Address:   | 252 | 253 | 254 | 255 |
 Stored Number: |   1 |   2 |   3 |   4 |
 ```
 
-### #memalias 
-You can use the #memalias directive to name any RAM address with a memorable string identifier, which can then be used
-anywhere a RAM address is expected. Here is an example:
+#### Combination with Preprocessor Macros
+You can combine these directives with preprocessor macros to create named arrays in your code.
 ```
-#memalias $my_number $0
+#macro MY_ARRAY `0`
+#datafrom $MY_ARRAY
+1 2 3 4
 
-mv $my_number 10
-out $my_number
+mv %0 MY_ARRAY ; Register zero now holds the start of the array.
 ```
-This program creates an alias for RAM address 0 called `my_number`, uses it to move the value of 10 into it, then
-prints it to the screen. Note that you still must prepend the name with the RAM operator (`$`).
-
-Because the #memalias directive is dealt with in a separate pass before any instruction statements are compiled, a RAM
-alias doesn't even have to be defined above where it's used in the program, making this a completely valid KAL program:
-```
-mv $my_number 10
-out $my_number
-
-#memalias $my_number $0
-```
-
-#### Aliased RAM Address Operator
-However, it would be nice to be able to recover the actual address the identifier is aliased to while still using that 
-handy identifier. This is what the aliased RAM address operator (`&`) is for.
-
-When followed by an aliased RAM address identifier, it evaluates to the numerical address that identifier is aliased to.
-```
-#memalias $named_location $10
-mv %0 &named_location ; Register 0 will now contain the number 10.
-```
-Note how the second line is different to:
-```
-mv %0 $named_location
-```
-As this instruction would move whatever value is in RAM address 10 into register 0.
-
-You can combine this with the #memalias and #datafrom directives to easily create named arrays in your code.
-```
-#memalias $my_text $100
-#datafrom &my_text
-"hello!\0"
-```
-
-Note that the result of this operator is a constant value and will be treated as such in the operands to any instruction
-or assembler directive.

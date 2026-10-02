@@ -57,8 +57,8 @@ void freeScanner(const Scanner* scanner)
 typedef enum
 {
 	TOKENCAT_MNEMONIC, TOKENCAT_ASSEMBLER_DIR,
-	TOKENCAT_CONSTANT, TOKENCAT_STRING_CHAR, TOKENCAT_ALIAS_ADDRESS,
-	TOKENCAT_REGISTER, TOKENCAT_MEMORY, TOKENCAT_MEMORY_ALIAS,
+	TOKENCAT_CONSTANT, TOKENCAT_STRING_CHAR,
+	TOKENCAT_REGISTER, TOKENCAT_MEMORY,
 	TOKENCAT_POINTER, TOKENCAT_LABEL_OPERAND
 } TokenTypeCategory;
 
@@ -81,16 +81,13 @@ static void printToken(const TokenType type, const char* start, const int length
 
 		TYPE_CASE(TOKEN_DATAFROM);
 		TYPE_CASE(TOKEN_DATATO);
-		TYPE_CASE(TOKEN_MEMALIAS);
 
 		TYPE_CASE(TOKEN_LABEL_DECL);
 
 		TYPE_CASE(TOKEN_CONSTANT);
 		TYPE_CASE(TOKEN_STRING_CHAR);
-		TYPE_CASE(TOKEN_ALIAS_ADDRESS);
 		TYPE_CASE(TOKEN_REGISTER);
 		TYPE_CASE(TOKEN_MEMORY);
-		TYPE_CASE(TOKEN_MEMORY_ALIAS);
 		TYPE_CASE(TOKEN_POINTER);
 		TYPE_CASE(TOKEN_LABEL_OPERAND);
 
@@ -303,10 +300,6 @@ static Token identifier(Scanner* scanner, const TokenTypeCategory tokenCat)
 
 	if (tokenCat == TOKENCAT_LABEL_OPERAND)
 		return makeToken(scanner, TOKEN_LABEL_OPERAND);
-	if (tokenCat == TOKENCAT_MEMORY_ALIAS)
-		return makeToken(scanner, TOKEN_MEMORY_ALIAS);
-	if (tokenCat == TOKENCAT_ALIAS_ADDRESS)
-		return makeToken(scanner, TOKEN_ALIAS_ADDRESS);
 	if (tokenCat == TOKENCAT_ASSEMBLER_DIR)
 		return assemblerDirective(scanner);
 
@@ -435,7 +428,7 @@ static Token scanToken(Scanner* scanner)
 
 		if (isDigit(peek(scanner), BASE_DECIMAL))
 			return number(scanner, TOKEN_MEMORY);
-		return identifier(scanner, TOKENCAT_MEMORY_ALIAS);
+		return errorToken(scanner, "Expected memory address after RAM operator.");
 	}
 	if (c == '*')
 	{
@@ -459,15 +452,6 @@ static Token scanToken(Scanner* scanner)
 			return errorToken(scanner, "Expected assembler directive after assembler directive operator.");
 
 		return identifier(scanner, TOKENCAT_ASSEMBLER_DIR);
-	}
-	if (c == '&')
-	{
-		skip(scanner);
-
-		if (!isAlpha(peek(scanner)))
-			return errorToken(scanner, "Expected aliased RAM identifier after aliased RAM address operator.");
-
-		return identifier(scanner, TOKENCAT_ALIAS_ADDRESS);
 	}
 
 	return errorToken(scanner, "Unexpected character.");

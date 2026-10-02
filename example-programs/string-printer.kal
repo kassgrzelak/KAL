@@ -1,8 +1,8 @@
-#memalias $ascii_string $100
-#datafrom $ascii_string
+#macro STRING `0`
+#datafrom $STRING
 72 69 76 76 79 0
 
-mv %0 &ascii_string
+mv %0 STRING
 loop_start:
     mv %1 *0
     jmpz %1 .end
