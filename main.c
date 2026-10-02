@@ -4,6 +4,7 @@
 
 #include "Compiler.h"
 #include "instructions.h"
+#include "Preprocessor.h"
 #include "VM.h"
 
 static void repl()
@@ -30,7 +31,13 @@ static void repl()
 			break;
 		}
 
-		interpret(&vm, line);
+		char* processedText = NULL;
+		const bool preprocessSuccess = preprocess(line, &processedText);
+
+		if (preprocessSuccess)
+			interpret(&vm, processedText);
+
+		free(processedText);
 	}
 
 	freeVM(&vm);
@@ -79,6 +86,19 @@ static char* readFile(const char* path)
 static int runFile(const char* path)
 {
 	char* source = readFile(path);
+
+	char* processedText = NULL;
+	const bool preprocessSuccess = preprocess(source, &processedText);
+
+	if (!preprocessSuccess)
+	{
+		free(source);
+		free(processedText);
+		return -1;
+	}
+
+	free(source);
+	source = processedText;
 
 	VM vm;
 	initVM(&vm);
@@ -170,7 +190,7 @@ static int runBytecode(const char* path)
 	const InterpretResult result = run(&vm);
 
 	free(fileData);
-	// Do NOT free VM as it will just try to free the bytecode pointer.
+	// Do NOT free VM as it will try to free the bytecode pointer.
 
 	if (result != INTERPRET_OK)
 		return -1;

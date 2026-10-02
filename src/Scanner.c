@@ -497,8 +497,9 @@ void tokenize(Scanner* scanner)
 			writeTokenArray(&scanner->tokenArray, token);
 			break;
 		}
-		
-		writeTokenArray(&scanner->tokenArray, token);
+
+		if (token.type != TOKEN_SKIP)
+			writeTokenArray(&scanner->tokenArray, token);
 
 		if (scanner->readingString)
 		{

@@ -49,7 +49,7 @@ register zero. ; mv $0 %0
 
 ### Constants
 Constants are written as just plain numbers, with no special operator denoting them. They are parsed as decimal numbers
-by default, but binary literals can be written by adding the prefix `0b`, octal by `0`, and hexadecimal by `0x` (All
+by default, but binary literals can be written by adding the prefix `0b`, octal by `0`, and hexadecimal by `0x` (all
 case-insensitive). Letters A through F in hexadecimal number literals are also case-insensitive.
 ```
 out 0b1001 ; Binary.
@@ -65,16 +65,16 @@ character.
 "hello" ; Is exactly the same as just putting:
 104 101 108 108 111 ; in your code.
 ```
-You can use either the double quote (`"`) or single quote (`'`) character to denote a string constant. The convention is
-to use single quotes for single character literals (e.g. `'c'`) and double quotes for full strings, but this is not
-enforced.
+You can use either the double quote (`"`) or single quote (`'`) character to denote a string constant, but you must 
+start and end with the same character. The convention is to use single quotes for single character literals (e.g. `'c'`)
+and double quotes for full strings, but this is not enforced.
 
 You can use a backslash (`\`) to denote an ASCII escape code. This can be used to have hard-to-type characters in your
 code using familiar names, such as `\n`. KAL only supports single-character escape codes. If there is no ASCII escape
 code for the character following the backslash character, or KAL does not support that escape code, it will be 
 equivalent to just typing that character without the backslash.
 
-Note that, unlike C/C++, the null character is not added for you at the end of string literals. If you want it, add `\0`
+Note that unlike C/C++, the null character is not added for you at the end of string literals. If you want it, add `\0`
 to the end of your string.
 
 ### Registers

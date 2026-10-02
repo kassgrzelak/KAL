@@ -42,6 +42,32 @@ uint16_t signatureFromModes(const AddressingMode* modes, const int count)
 	return signature;
 }
 
+// Find the index of a case-insensitive name in an indexed name array. Returns -1 if no match is found.
+int findName(const char* const names[256], const int lengths[256], const char* name, const int nameLength)
+{
+	for (int i = 0; i < 256; ++i)
+	{
+		if (names[i] == NULL)
+			continue;
+		if (lengths[i] != nameLength)
+			continue;
+
+		bool notEqual = false;
+
+		for (int charIndex = 0; charIndex < nameLength; ++charIndex)
+			if (tolower(names[i][charIndex]) != tolower(name[charIndex]))
+			{
+				notEqual = true;
+				break;
+			}
+
+		if (!notEqual)
+			return i;
+	}
+
+	return -1;
+}
+
 #define MAX_OPERAND_NUM 8
 
 typedef struct
@@ -184,37 +210,11 @@ static void emitByte(const Compiler* compiler, const uint8_t byte)
 	writeBytecode(compiler->bytecode, byte);
 }
 
-// Find the index of a case-insensitive name in an indexed name array. Returns -1 if no match is found.
-static int findName(const char* const names[256], const int lengths[256], const Token* token)
-{
-	for (int i = 0; i < 256; ++i)
-	{
-		if (names[i] == NULL)
-			continue;
-		if (lengths[i] != token->length)
-			continue;
-
-		bool notEqual = false;
-
-		for (int charIndex = 0; charIndex < token->length; ++charIndex)
-			if (tolower(names[i][charIndex]) != tolower(token->start[charIndex]))
-			{
-				notEqual = true;
-				break;
-			}
-
-		if (!notEqual)
-			return i;
-	}
-
-	return -1;
-}
-
 // Parse a label operand token and return its index in the labelNames array.
 static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
 {
 	// Iterate over all label declarations to see if a match is found.
-	const int labelIndex = findName(compiler->labelNames, compiler->labelLengths, token);
+	const int labelIndex = findName(compiler->labelNames, compiler->labelLengths, token->start, token->length);
 	if (labelIndex != -1)
 		return labelIndex;
 
@@ -302,7 +302,7 @@ static uint8_t parseConstant(Compiler* compiler, const Token* token)
 
 	// Else alias address.
 
-	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token);
+	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token->start, token->length);
 	if (memIndex != -1)
 		return memIndex;
 
@@ -319,7 +319,7 @@ static uint8_t parseMemoryOperand(Compiler* compiler, const Token* token)
 
 	// Else aliased mem address.
 
-	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token);
+	const int memIndex = findName(compiler->memAliases, compiler->memAliasLengths, token->start, token->length);
 	if (memIndex != -1)
 		return memIndex;
 
@@ -597,7 +597,7 @@ static bool labelDeclPass(Compiler* compiler, const Scanner* scanner)
 	return true;
 }
 
-static bool memAliasPass(Compiler* compiler, Scanner* scanner)
+static bool memAliasPass(Compiler* compiler, const Scanner* scanner)
 {
 #ifdef DEBUG_PRINT
 	bool memAliasSeen = false;

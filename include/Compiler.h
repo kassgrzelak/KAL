@@ -22,6 +22,7 @@ typedef enum
 
 AddressingMode tokenTypeToAddressingMode(TokenType type);
 uint16_t signatureFromModes(const AddressingMode* modes, int count);
+int findName(const char* const names[256], const int lengths[256], const char* name, int nameLength);
 
 bool compile(Bytecode* bytecode, size_t* jumpTable, uint8_t* ram, const char* source);
 
