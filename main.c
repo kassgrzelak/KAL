@@ -123,6 +123,19 @@ static int outputBytecode(const char* sourcePath, const char* outputPath)
 
 	char* source = readFile(sourcePath);
 
+	char* processedText = NULL;
+	const bool preprocessSuccess = preprocess(source, &processedText);
+
+	if (!preprocessSuccess)
+	{
+		free(source);
+		free(processedText);
+		return -1;
+	}
+
+	free(source);
+	source = processedText;
+
 	const bool compileSuccess = compile(&bytecode, jumpTable, ram, source);
 
 	if (!compileSuccess)
@@ -163,7 +176,7 @@ static int outputBytecode(const char* sourcePath, const char* outputPath)
 
 	fclose(outputFile);
 
-	printf("Success. Wrote %llu byte bytecode file.",
+	printf("Success. Wrote %zu byte bytecode file.",
 		sizeof(jumpTable) + sizeof(ram) + bytecode.count * sizeof(uint8_t));
 
 	freeBytecode(&bytecode);
