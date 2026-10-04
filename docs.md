@@ -119,7 +119,8 @@ start:
 jmp .start ; Output 0 infinitely.
 ```
 
-Label identifiers must be exclusively alphanumeric, and you may not have more than 256 of them in a program.
+Label identifiers must be exclusively alphanumeric including underscores, and you may not have more than 256 of them in
+a program. This is due to a fundamental limitation of the virtual 8-bit processor used by KAL. 
 
 ## The Preprocessor
 The preprocessor runs before the program is compiled and allows you to define identifiers that will be replaced with 
@@ -146,7 +147,7 @@ The preprocessor repeats macro replacement until no more replacements can be mad
 program and up to 64 preprocessing rounds.
 
 ### #unmacro
-The #unmacro directive undefines a previously defined macro. Appearances of this macro will not replaced after this 
+The #unmacro directive undefines a previously defined macro. Appearances of this macro will not be replaced after this 
 directive.
 ```
 #macro VALUE `10`
