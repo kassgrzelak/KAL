@@ -41,9 +41,9 @@ uint16_t signatureFromModes(const AddressingMode* modes, const int count)
 }
 
 // Find the index of a case-insensitive name in an indexed name array. Returns -1 if no match is found.
-int findName(const char* const names[256], const int lengths[256], const char* name, const int nameLength)
+int findName(const char** names, const int* lengths, const int namesSize, const char* name, const int nameLength)
 {
-	for (int i = 0; i < 256; ++i)
+	for (int i = 0; i < namesSize; ++i)
 	{
 		if (names[i] == NULL)
 			continue;
@@ -207,7 +207,7 @@ static void emitByte(const Compiler* compiler, const uint8_t byte)
 static uint8_t parseLabelOperand(Compiler* compiler, const Token* token)
 {
 	// Iterate over all label declarations to see if a match is found.
-	const int labelIndex = findName(compiler->labelNames, compiler->labelLengths, token->start, token->length);
+	const int labelIndex = findName(compiler->labelNames, compiler->labelLengths, 256, token->start, token->length);
 	if (labelIndex != -1)
 		return labelIndex;
 
@@ -317,7 +317,7 @@ static uint8_t parseOperand(Compiler* compiler, const int index)
 #ifdef DEBUG_PRINT
 static void printOpcode(const size_t byte, const uint8_t opcode)
 {
-	printf("0x%04llx | ", byte);
+	printf("0x%04zx | ", byte);
 
 	switch (opcode)
 	{

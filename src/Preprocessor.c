@@ -8,19 +8,68 @@
 #include <string.h>
 
 #include "Compiler.h"
+#include "memory.h"
 #include "PreprocScanner.h"
+
+typedef struct
+{
+	const char** strings;
+	size_t count;
+	size_t capacity;
+} StringArray;
+
+static void initStringArray(StringArray* array)
+{
+	INIT_ARRAY(array, strings);
+}
+
+static void writeStringArray(StringArray* array, const char* string)
+{
+	WRITE_ARRAY(const char*, array, strings, string);
+}
+
+static void freeStringArray(StringArray* array)
+{
+	if (!array)
+		return;
+
+	free(array->strings);
+}
+
+typedef struct
+{
+	int* ints;
+	size_t count;
+	size_t capacity;
+} IntArray;
+
+static void initIntArray(IntArray* array)
+{
+	INIT_ARRAY(array, ints);
+}
+
+static void writeIntArray(IntArray* array, const int num)
+{
+	WRITE_ARRAY(int, array, ints, num);
+}
+
+static void freeIntArray(IntArray* array)
+{
+	if (!array)
+		return;
+
+	free(array->ints);
+}
 
 typedef struct
 {
 	char* processedText;
 	size_t processedTextLength;
 
-	int macroDirectivesSeen;
-
-	const char* macroIdentifiers[256];
-	int macroIdentifierLengths[256];
-	const char* macroReplacements[256];
-	int macroReplacementLengths[256];
+	StringArray macroIdentifiers;
+	IntArray macroIdentifierLengths;
+	StringArray macroReplacements;
+	IntArray macroReplacementLengths;
 
 	bool hadError;
 	bool madeReplacements;
@@ -33,13 +82,22 @@ static void initPreprocessor(Preprocessor* preprocessor, const PreprocScanner* s
 {
 	preprocessor->processedText = NULL;
 	preprocessor->processedTextLength = 0;
-	preprocessor->macroDirectivesSeen = 0;
-	for (int i = 0; i < 256; ++ i)
-		preprocessor->macroIdentifiers[i] = NULL;
+	initStringArray(&preprocessor->macroIdentifiers);
+	initIntArray(&preprocessor->macroIdentifierLengths);
+	initStringArray(&preprocessor->macroReplacements);
+	initIntArray(&preprocessor->macroReplacementLengths);
 	preprocessor->hadError = false;
 	preprocessor->madeReplacements = false;
 	preprocessor->finalRound = finalRound;
 	preprocessor->current = scanner->tokenArray.tokens;
+}
+
+static void freePreprocessor(Preprocessor* preprocessor)
+{
+	freeStringArray(&preprocessor->macroIdentifiers);
+	freeIntArray(&preprocessor->macroIdentifierLengths);
+	freeStringArray(&preprocessor->macroReplacements);
+	freeIntArray(&preprocessor->macroReplacementLengths);
 }
 
 static void errorAt(Preprocessor* preprocessor, const PreprocToken* token, const char* message)
@@ -98,11 +156,7 @@ static bool appendString(Preprocessor* preprocessor, const char* string)
 
 static void macroDirective(Preprocessor* preprocessor)
 {
-	const PreprocToken* directiveToken = peek(preprocessor);
 	advance(preprocessor);
-
-	if (preprocessor->macroDirectivesSeen >= 256)
-		return errorAt(preprocessor, directiveToken, "Exceeded the maximum of 256 macros in one program.");
 
 	const PreprocToken* identifierToken = peek(preprocessor);
 
@@ -121,14 +175,11 @@ static void macroDirective(Preprocessor* preprocessor)
 	const char* replacement = replacementToken->start;
 	const int replacementLength = replacementToken->length;
 
-	const int index = preprocessor->macroDirectivesSeen;
+	writeStringArray(&preprocessor->macroIdentifiers, macroIdentifier);
+	writeIntArray(&preprocessor->macroIdentifierLengths, identifierLength);
+	writeStringArray(&preprocessor->macroReplacements, replacement);
+	writeIntArray(&preprocessor->macroReplacementLengths, replacementLength);
 
-	preprocessor->macroIdentifiers[index] = macroIdentifier;
-	preprocessor->macroIdentifierLengths[index] = identifierLength;
-	preprocessor->macroReplacements[index] = replacement;
-	preprocessor->macroReplacementLengths[index] = replacementLength;
-
-	++preprocessor->macroDirectivesSeen;
 	advance(preprocessor);
 
 	if (!preprocessor->finalRound)
@@ -150,23 +201,23 @@ static void unmacroDirective(Preprocessor* preprocessor)
 	if (identifierToken->type != PREPROC_TOKEN_IDENTIFIER)
 		return;
 
-	const int macroIndex = findName(preprocessor->macroIdentifiers, preprocessor->macroIdentifierLengths,
-		identifierToken->start, identifierToken->length);
+	const int macroIndex = findName(preprocessor->macroIdentifiers.strings, preprocessor->macroIdentifierLengths.ints,
+		(int)preprocessor->macroIdentifiers.count, identifierToken->start, identifierToken->length);
 
 	if (macroIndex == -1)
 		return errorAt(preprocessor, identifierToken, "Tried to undefine non-existent macro.");
 
 	if (!preprocessor->finalRound)
 	{
-		const char* identifier = preprocessor->macroIdentifiers[macroIndex];
-		const int identifierLength = preprocessor->macroIdentifierLengths[macroIndex];
+		const char* identifier = preprocessor->macroIdentifiers.strings[macroIndex];
+		const int identifierLength = preprocessor->macroIdentifierLengths.ints[macroIndex];
 
 		appendString(preprocessor, "#unmacro ");
 		appendChars(preprocessor, identifier, identifier + identifierLength);
 		appendString(preprocessor, " ");
 	}
 
-	preprocessor->macroIdentifiers[macroIndex] = NULL;
+	preprocessor->macroIdentifiers.strings[macroIndex] = NULL;
 	advance(preprocessor);
 }
 
@@ -186,8 +237,8 @@ static void processText(Preprocessor* preprocessor)
 				&& identifierEnd - textToken->start <= textToken->length)
 				++identifierEnd;
 
-			const int macroIndex = findName(preprocessor->macroIdentifiers, preprocessor->macroIdentifierLengths,
-				textEnd, (int)(identifierEnd - textEnd));
+			const int macroIndex = findName(preprocessor->macroIdentifiers.strings, preprocessor->macroIdentifierLengths.ints,
+				(int)preprocessor->macroIdentifiers.count, textEnd, (int)(identifierEnd - textEnd));
 
 			if (macroIndex == -1)
 				textEnd = identifierEnd;
@@ -197,8 +248,8 @@ static void processText(Preprocessor* preprocessor)
 
 				appendChars(preprocessor, textStart, textEnd);
 
-				const char* replacementStart = preprocessor->macroReplacements[macroIndex];
-				const char* replacementEnd = replacementStart + preprocessor->macroReplacementLengths[macroIndex];
+				const char* replacementStart = preprocessor->macroReplacements.strings[macroIndex];
+				const char* replacementEnd = replacementStart + preprocessor->macroReplacementLengths.ints[macroIndex];
 
 				appendChars(preprocessor, replacementStart, replacementEnd);
 
@@ -271,7 +322,11 @@ static bool doPreprocessRound(const char* source, char** processedText, bool* ma
 
 	*processedText = preprocessor.processedText;
 	*madeReplacements = preprocessor.madeReplacements;
-	return !preprocessor.hadError;
+
+	const bool hadError = preprocessor.hadError;
+
+	freePreprocessor(&preprocessor);
+	return !hadError;
 }
 
 // Preprocess source text and return whether it was successful.

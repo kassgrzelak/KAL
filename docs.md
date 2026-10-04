@@ -143,8 +143,8 @@ macro.
 DOUBLED ; Outputs 10 10.
 ```
 
-The preprocessor repeats macro replacement until no more replacements can be made. It allows up to 256 macros in one
-program and up to 64 preprocessing rounds.
+The preprocessor repeats macro replacement until no more replacements can be made. It allows up to 64 preprocessing 
+rounds.
 
 ### #unmacro
 The #unmacro directive undefines a previously defined macro. Appearances of this macro will not be replaced after this 
@@ -159,8 +159,6 @@ out VALUE ; Outputs 20.
 
 After a macro is undefined, text with its name is left unchanged until it is defined again. It is an error to try to 
 remove a macro that has not been defined.
-
-Note that undefining a macro does not remove from the 256 macro limit.
 
 ## Assembler Directives
 Assembler directives are indicated by a hashtag (`#`) and do not translate to any instructions in the compiled code,
