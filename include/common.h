@@ -11,6 +11,6 @@
 #include <stdlib.h>
 
 // Print tokens, bytecode, etc. for debugging.
-#define DEBUG_PRINT
+// #define DEBUG_PRINT
 
 #endif //KAL_COMMON_H
