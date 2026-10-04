@@ -198,7 +198,10 @@ static void unmacroDirective(Preprocessor* preprocessor)
 		(int)preprocessor->macroIdentifiers.count, identifierToken->start, identifierToken->length);
 
 	if (macroIndex == -1)
+	{
+		advance(preprocessor);
 		return errorAt(preprocessor, identifierToken, "Tried to undefine non-existent macro.");
+	}
 
 	if (!preprocessor->finalRound)
 	{
@@ -348,6 +351,12 @@ bool preprocess(char* source, char** processedText)
 			success = false;
 			break;
 		}
+	}
+
+	if (!success)
+	{
+		*processedText = source;
+		return false;
 	}
 
 	if (roundCount > 64)
