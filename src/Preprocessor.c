@@ -149,13 +149,9 @@ static bool appendChars(Preprocessor* preprocessor, const char* start, const cha
 	return true;
 }
 
-static bool appendString(Preprocessor* preprocessor, const char* string)
-{
-	return appendChars(preprocessor, string, string + strlen(string));
-}
-
 static void macroDirective(Preprocessor* preprocessor)
 {
+	const PreprocToken* directiveToken = peek(preprocessor);
 	advance(preprocessor);
 
 	const PreprocToken* identifierToken = peek(preprocessor);
@@ -184,16 +180,13 @@ static void macroDirective(Preprocessor* preprocessor)
 
 	if (!preprocessor->finalRound)
 	{
-		appendString(preprocessor, "#macro ");
-		appendChars(preprocessor, macroIdentifier, macroIdentifier + identifierLength);
-		appendString(preprocessor, " `");
-		appendChars(preprocessor, replacement, replacement + replacementLength);
-		appendString(preprocessor, "` ");
+		appendChars(preprocessor, directiveToken->start, replacement + replacementLength + 1);
 	}
 }
 
 static void unmacroDirective(Preprocessor* preprocessor)
 {
+	const PreprocToken* directiveToken = peek(preprocessor);
 	advance(preprocessor);
 
 	const PreprocToken* identifierToken = peek(preprocessor);
@@ -212,9 +205,7 @@ static void unmacroDirective(Preprocessor* preprocessor)
 		const char* identifier = preprocessor->macroIdentifiers.strings[macroIndex];
 		const int identifierLength = preprocessor->macroIdentifierLengths.ints[macroIndex];
 
-		appendString(preprocessor, "#unmacro ");
-		appendChars(preprocessor, identifier, identifier + identifierLength);
-		appendString(preprocessor, " ");
+		appendChars(preprocessor, directiveToken->start, identifier + identifierLength);
 	}
 
 	preprocessor->macroIdentifiers.strings[macroIndex] = NULL;
@@ -319,6 +310,11 @@ static bool doPreprocessRound(const char* source, char** processedText, bool* ma
 
 	const char* nullEnd = "\0";
 	appendChars(&preprocessor, nullEnd, nullEnd + 1);
+
+#ifdef DEBUG_PRINT
+	if (!finalRound)
+		printf("\nText after round %d:\n\"%s\"", preprocessingRounds, preprocessor.processedText);
+#endif
 
 	*processedText = preprocessor.processedText;
 	*madeReplacements = preprocessor.madeReplacements;
