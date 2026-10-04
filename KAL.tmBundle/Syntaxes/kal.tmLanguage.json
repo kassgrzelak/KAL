@@ -9,8 +9,8 @@
     "language":
     {
       "patterns": [{"include": "#mnemonic"}, {"include": "#directive"}, {"include":  "#comment"},
-        {"include":  "#string"}, {"include":  "#constant"}, {"include":  "#register"}, {"include":  "#memory"},
-        {"include":  "#pointer"}, {"include": "#macro-replacement"}]
+        {"include":  "#string-double"}, {"include":  "#string-single"}, {"include":  "#constant"},
+        {"include":  "#register"}, {"include":  "#memory"}, {"include":  "#pointer"}, {"include": "#macro-replacement"}]
     },
 
     "mnemonic":
@@ -31,11 +31,24 @@
       "match": ";[^;\\n]*;|;[^;]*\\n"
     },
 
-    "string":
+    "string-double":
     {
-      "name": "string.kal",
-      "begin": "\"|'",
-      "end": "\"|'",
+      "name": "string.kal.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.kal",
+          "match": "\\\\."
+        }
+      ]
+    },
+
+    "string-single":
+    {
+      "name": "string.kal.single",
+      "begin": "'",
+      "end": "'",
       "patterns": [
         {
           "name": "constant.character.escape.kal",
@@ -54,13 +67,13 @@
     "constant":
     {
       "name": "constant.number.kal",
-      "match": "(?i)((?<!\\S)(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+))|(&[a-z0-9_]+)"
+      "match": "(?i)((?<!\\S)(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+))"
     },
 
     "register":
     {
       "name": "support.function.kal",
-      "match": "(?i)%(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+|[a-h])"
+      "match": "(?i)%(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+|[a-z0-9_]+)"
     },
 
     "memory":
@@ -72,7 +85,7 @@
     "pointer":
     {
       "name": "entity.name.class.pointer.kal",
-      "match": "(?i)\\*(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+|[a-h])"
+      "match": "(?i)\\*(0b[01]+|0[0-7]+|0x[0-9a-f]+|[0-9]+|[a-z0-9_]+)"
     }
   }
 }
