@@ -80,6 +80,9 @@ sub = Instruction("SUB", ["mc", "mm"], c_op_template("-"))
 mul = Instruction("MUL", ["mc", "mm"], c_op_template("*"))
 div = Instruction("DIV", ["mc", "mm"], c_op_template("/"))
 
+asl = Instruction("ASL", ["mc", "mm"], c_op_template("<<"))
+asr = Instruction("ASR", ["mc", "mm"], c_op_template(">>"))
+
 and_ = Instruction("AND", ["mc", "mm"], c_op_template("&"))
 or_ = Instruction("OR", ["mc", "mm"], c_op_template("|"))
 xor = Instruction("XOR", ["mc", "mm"], c_op_template("^"))
@@ -88,7 +91,7 @@ not_template = """uint8_t* mem = &$1;
     *mem = !$2;"""
 not_ = Instruction("NOT", ["mc", "mm"], not_template)
 
-instructions = [mv, out, outa, getc, inc, dec, add, sub, mul, div, and_, or_, xor, not_]
+instructions = [mv, out, outa, getc, inc, dec, add, sub, mul, div, asl, asr, and_, or_, xor, not_]
 
 ###########################
 # Instruction Definitions #

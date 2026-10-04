@@ -58,14 +58,22 @@ Subtract from a value in a memory location.
 ### mul
 Multiply a value in a memory location.
 - `mul M C` - Multiply C by the value in M and store the result in M.
-- `mul M1 M0` - Multiply the value in M0 by the value in M1 and store the result in 
-M1.
+- `mul M1 M0` - Multiply the value in M0 by the value in M1 and store the result in M1.
 
 ### div
 Divide a value in a memory location with truncation.
 - `div M C` - Divide the value in M by C and store the result in M.
-- `div M1 M0` - Divide the value in M1 by the value in M0 and store the result in
-  M1.
+- `div M1 M0` - Divide the value in M1 by the value in M0 and store the result in M1.
+
+### asl
+Do an arithmetic shift left by the given number of places.
+- `asl M C` - Shift the value in M left by C places and store the result in M.
+- `asl M1 M0` - Shift the value in M1 left by M0 places and store the result in M1.
+
+### asr
+Do an arithmetic shift right by the given number of places.
+- `asr M C` - Shift the value in M right by C places and store the result in M.
+- `asr M1 M0` - Shift the value in M1 right by M0 places and store the result in M1.
 
 ## Bitwise Logic
 ### and
