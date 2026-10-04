@@ -225,6 +225,14 @@ static void processText(Preprocessor* preprocessor)
 
 	while (textEnd - textToken->start < textToken->length)
 	{
+		if (*textEnd == ';')
+			do
+			{
+				++textEnd;
+				++identifierEnd;
+			}
+			while (*textEnd != ';' && *textEnd != '\n' && textEnd - textToken->start < textToken->length);
+
 		if (isAlpha(*textEnd))
 		{
 			while ((isAlpha(*identifierEnd) || isDigit(*identifierEnd, BASE_DECIMAL))
