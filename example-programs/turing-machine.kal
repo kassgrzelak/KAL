@@ -1,0 +1,104 @@
+#macro TAPE `0`
+#datafrom $TAPE
+"11111\0"
+
+#macro RULE_SIZE `5`
+
+#macro END_OF_RULE_TABLE `0xff`
+
+; Rules are in the form:
+; current state, seen symbol, replacing symbol, direction, next state.
+; Null character is treated as the blank symbol.
+#macro RULE_TABLE `100`
+#datafrom $RULE_TABLE
+0 '1' '1' 'R' 1
+1 '1' '1' 'R' 0
+1 '\0' '\0' 'S' 'a'
+END_OF_RULE_TABLE
+
+#macro CURR_STATE `0`
+#macro TAPE_HEAD `1`
+
+start:
+	mv %CURR_STATE 0
+	mv %TAPE_HEAD TAPE
+
+	rule_search_start:
+		#macro RULE_PTR `2`
+		#macro TMP `3`
+
+		mv %RULE_PTR RULE_TABLE
+
+		rule_search:
+			mv %TMP *RULE_PTR ; Rule starting state.
+			sub %TMP %CURR_STATE
+			jmpnz %TMP .continue ; Test for equality with current state.
+
+			inc %RULE_PTR ; Move rule pointer to current symbol field.
+			mv %TMP *RULE_PTR
+			sub %TMP *TAPE_HEAD
+			jmpz %TMP .rule_found ; Test for equality with current symbol.
+			dec %RULE_PTR ; Reset rule pointer to beginning of rule object.
+			jmp .continue
+
+			continue:
+				add %RULE_PTR RULE_SIZE ; Move rule pointer to next rule object.
+				mv %TMP *RULE_PTR
+				sub %TMP END_OF_RULE_TABLE
+				jmpz %TMP .no_rule ; Exit rule search of no rule is found.
+				jmp .rule_search
+
+		no_rule:
+			jmp .reject
+
+		rule_found:
+			inc %RULE_PTR ; Move rule pointer to replacing symbol field.
+			mv %TMP *RULE_PTR
+			mv *TAPE_HEAD %TMP ; Replace symbol under tape head accordingly.
+
+			inc %RULE_PTR ; Move rule pointer to direction field.
+
+			mv %TMP *RULE_PTR
+			sub %TMP 'L'
+			jmpz %TMP .left ; Test for equality and jump to appropriate direction label.
+
+			mv %TMP *RULE_PTR
+			sub %TMP 'R'
+			jmpz %TMP .right
+
+			mv %TMP *RULE_PTR
+			sub %TMP 'S'
+			jmpz %TMP .change_state
+
+			out 0xff
+			hlt ; Invalid direction.
+
+			left:
+				dec %TAPE_HEAD
+				jmp .change_state
+			right:
+				inc %TAPE_HEAD
+				jmp .change_state
+
+		change_state:
+			inc %RULE_PTR ; Move rule pointer to next state field.
+
+			mv %TMP *RULE_PTR
+			sub %TMP 'r'
+			jmpz %TMP .reject ; Test for equality and jump to appropriate label.
+
+			mv %TMP *RULE_PTR
+			sub %TMP 'a'
+			jmpz %TMP .accept
+
+			mv %CURR_STATE *RULE_PTR ; If not accept or reject, just make next state current.
+			jmp .rule_search_start ; And begin rule search again.
+
+			reject:
+				out 0
+				hlt
+
+			accept:
+				out 1
+				hlt
+
