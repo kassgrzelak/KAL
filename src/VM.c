@@ -22,7 +22,7 @@ void freeVM(const VM* vm)
 
 static void runtimeError(const VM* vm, const char* message)
 {
-	printf("[byte 0x%04llx] Error: %s\n", vm->ip - vm->bytecode.code - 1, message);
+	printf("[byte 0x%04tx] Error: %s\n", vm->ip - vm->bytecode.code - 1, message);
 }
 
 #define CONST() *vm->ip++
