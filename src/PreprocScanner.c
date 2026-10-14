@@ -100,7 +100,10 @@ static bool skipWhitespace(PreprocScanner* scanner)
 			break;
 
 		default:
-			return whitespaceSeen;
+			{
+				scanner->start = scanner->current;
+				return whitespaceSeen;
+			}
 		}
 	}
 }
@@ -188,7 +191,6 @@ static PreprocToken errorToken(PreprocScanner* scanner, const char* message)
 static void macroDirective(PreprocScanner* scanner)
 {
 	skipWhitespace(scanner);
-	scanner->start = scanner->current;
 	
 	if (!isAlpha(peek(scanner)))
 	{
@@ -203,7 +205,6 @@ static void macroDirective(PreprocScanner* scanner)
 	makeWriteToken(scanner, PREPROC_TOKEN_IDENTIFIER);
 
 	skipWhitespace(scanner);
-	scanner->start = scanner->current;
 
 	if (peek(scanner) == '(')
 	{
@@ -213,7 +214,6 @@ static void macroDirective(PreprocScanner* scanner)
 		for (;;)
 		{
 			skipWhitespace(scanner);
-			scanner->start = scanner->current;
 
 			if (peek(scanner) == ')')
 			{
@@ -236,7 +236,6 @@ static void macroDirective(PreprocScanner* scanner)
 
 			makeWriteToken(scanner, PREPROC_TOKEN_IDENTIFIER);
 			skipWhitespace(scanner);
-			scanner->start = scanner->current;
 
 			if (peek(scanner) == ')')
 				goto makeRightParen;
@@ -278,7 +277,6 @@ static void macroDirective(PreprocScanner* scanner)
 static void unmacroDirective(PreprocScanner* scanner)
 {
 	skipWhitespace(scanner);
-	scanner->start = scanner->current;
 	
 	if (!isAlpha(peek(scanner)))
 	{
