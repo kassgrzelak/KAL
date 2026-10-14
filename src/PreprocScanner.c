@@ -125,6 +125,9 @@ static void printToken(const PreprocTokenType type, const char* start, const int
 
 		TYPE_CASE(PREPROC_TOKEN_TEXT);
 
+		TYPE_CASE(PREPROC_TOKEN_LPAREN);
+		TYPE_CASE(PREPROC_TOKEN_RPAREN);
+
 		TYPE_CASE(PREPROC_TOKEN_EOF);
 		TYPE_CASE(PREPROC_TOKEN_ERROR);
 
@@ -154,6 +157,16 @@ static PreprocToken makeToken(const PreprocScanner* scanner, const PreprocTokenT
 	return token;
 }
 
+static void writeToken(PreprocScanner* scanner, const PreprocToken token)
+{
+	writePreprocTokenArray(&scanner->tokenArray, token);
+}
+
+static void makeWriteToken(PreprocScanner* scanner, const PreprocTokenType type)
+{
+	writeToken(scanner, makeToken(scanner, type));
+}
+
 static PreprocToken errorToken(PreprocScanner* scanner, const char* message)
 {
 	PreprocToken token;
@@ -179,7 +192,7 @@ static void macroDirective(PreprocScanner* scanner)
 	
 	if (!isAlpha(peek(scanner)))
 	{
-		writePreprocTokenArray(&scanner->tokenArray, errorToken(scanner, "Expected identifier after #macro"
+		writeToken(scanner, errorToken(scanner, "Expected identifier after #macro"
 			" directive."));
 		return;
 	}
@@ -187,13 +200,61 @@ static void macroDirective(PreprocScanner* scanner)
 	while (isAlpha(peek(scanner)) || isDigit(peek(scanner), BASE_DECIMAL))
 		advance(scanner);
 
-	writePreprocTokenArray(&scanner->tokenArray, makeToken(scanner, PREPROC_TOKEN_IDENTIFIER));
+	makeWriteToken(scanner, PREPROC_TOKEN_IDENTIFIER);
 
 	skipWhitespace(scanner);
+	scanner->start = scanner->current;
+
+	if (peek(scanner) == '(')
+	{
+		advance(scanner);
+		makeWriteToken(scanner, PREPROC_TOKEN_LPAREN);
+
+		for (;;)
+		{
+			skipWhitespace(scanner);
+			scanner->start = scanner->current;
+
+			if (peek(scanner) == ')')
+			{
+				makeRightParen:
+				advance(scanner);
+				makeWriteToken(scanner, PREPROC_TOKEN_RPAREN);
+				skipWhitespace(scanner);
+				break;
+			}
+
+			if (!isAlpha(peek(scanner)))
+			{
+				writeToken(scanner, errorToken(scanner, "Expected identifier in "
+				   "parameter list of function-like macro directive."));
+				return;
+			}
+
+			while (isAlpha(peek(scanner)) || isDigit(peek(scanner), BASE_DECIMAL))
+				advance(scanner);
+
+			makeWriteToken(scanner, PREPROC_TOKEN_IDENTIFIER);
+			skipWhitespace(scanner);
+			scanner->start = scanner->current;
+
+			if (peek(scanner) == ')')
+				goto makeRightParen;
+
+			if (peek(scanner) != ',')
+			{
+				writeToken(scanner, errorToken(scanner, "Expected comma or close parenthesis after"
+					" identifier in function-like macro directive."));
+				return;
+			}
+
+			advance(scanner);
+		}
+	}
 
 	if (peek(scanner) != '`')
 	{
-		writePreprocTokenArray(&scanner->tokenArray, errorToken(scanner, "Expected macro definition after "
+		writeToken(scanner, errorToken(scanner, "Expected macro definition after "
 			"#macro directive."));
 		return;
 	}
@@ -205,12 +266,12 @@ static void macroDirective(PreprocScanner* scanner)
 	
 	if (atEnd(scanner))
 	{
-		writePreprocTokenArray(&scanner->tokenArray, errorToken(scanner, "End of file reached before closing"
+		writeToken(scanner, errorToken(scanner, "End of file reached before closing"
 			" quote of macro definition."));
 		return;
 	}
 	
-	writePreprocTokenArray(&scanner->tokenArray, makeToken(scanner, PREPROC_TOKEN_REPLACEMENT));
+	makeWriteToken(scanner, PREPROC_TOKEN_REPLACEMENT);
 	skip(scanner); // Skip closing quote.
 }
 
@@ -221,7 +282,7 @@ static void unmacroDirective(PreprocScanner* scanner)
 	
 	if (!isAlpha(peek(scanner)))
 	{
-		writePreprocTokenArray(&scanner->tokenArray, errorToken(scanner, "Expected identifier after #unmacro"
+		writeToken(scanner, errorToken(scanner, "Expected identifier after #unmacro"
 			" directive."));
 		return;
 	}
@@ -229,7 +290,7 @@ static void unmacroDirective(PreprocScanner* scanner)
 	while (isAlpha(peek(scanner)) || isDigit(peek(scanner), BASE_DECIMAL))
 		advance(scanner);
 
-	writePreprocTokenArray(&scanner->tokenArray, makeToken(scanner, PREPROC_TOKEN_IDENTIFIER));
+	makeWriteToken(scanner, PREPROC_TOKEN_IDENTIFIER);
 	scanner->start = scanner->current;
 }
 
@@ -246,14 +307,14 @@ void preprocTokenize(PreprocScanner* scanner)
 		if (atEnd(scanner))
 		{
 			endOfText:
-			writePreprocTokenArray(&scanner->tokenArray, makeToken(scanner, PREPROC_TOKEN_EOF));
+			makeWriteToken(scanner, PREPROC_TOKEN_EOF);
 			break;
 		}
 		
 		while (peek(scanner) != '#' && !atEnd(scanner))
 			advance(scanner);
 		
-		writePreprocTokenArray(&scanner->tokenArray, makeToken(scanner, PREPROC_TOKEN_TEXT));
+		makeWriteToken(scanner, PREPROC_TOKEN_TEXT);
 		scanner->start = scanner->current;
 
 		if (atEnd(scanner))
@@ -286,7 +347,7 @@ void preprocTokenize(PreprocScanner* scanner)
 		if (tokenType == PREPROC_TOKEN_ERROR)
 			continue; // Go back to consuming as text. The non-preprocessor directive stays in the consumed characters.
 
-		writePreprocTokenArray(&scanner->tokenArray, makeToken(scanner, tokenType));
+		makeWriteToken(scanner, tokenType);
 
 		switch (tokenType)
 		{
